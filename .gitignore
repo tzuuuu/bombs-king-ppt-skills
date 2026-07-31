@@ -1,0 +1,23 @@
+# macOS metadata
+.DS_Store
+
+# Large local test fixtures
+/測試環境/
+
+# Dependencies and generated build output
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+
+# Temporary files and logs
+tmp/
+temp/
+*.log
+~$*
+
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
