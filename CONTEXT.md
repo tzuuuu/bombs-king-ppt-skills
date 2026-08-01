@@ -19,3 +19,7 @@ _Avoid_: 插畫、流程圖、架構圖、投影片標題或敘事說明
 **圖表來源包 (Chart Source Package)**:
 一張資料圖表的可重現交接物，包含實際使用的資料快照、Python 產生程式與完成圖像，是圖表數值的權威來源與可編輯圖表重建的必要依據。
 _Avoid_: 圖表附件、稽核檔案、圖表參考圖
+
+**PowerPoint 原生轉譯 (Native PowerPoint Render)**:
+由 Microsoft PowerPoint 將受支援的 PowerPoint 簡報、放映檔或範本匯出的原始 PDF，是 agent 判讀投影片內容與畫面的權威來源；供檢視的 PDF 僅能從中移除隱藏頁，逐頁圖像也僅能從該檢視 PDF 衍生。
+_Avoid_: LibreOffice 轉譯、PowerPoint 檔案直接預覽、XML 畫面推測
