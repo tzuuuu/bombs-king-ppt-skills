@@ -321,7 +321,7 @@ def _write_template(path: Path) -> None:
             "canonical_terms": ["Term one", "Term two", "Term three"],
         },
         "selected_image_backend": "built-in image tool",
-        "max_concurrent_slides": 6,
+        "max_concurrent_slides": 30,
         "sample_generation_method": {
             "backend_used": "built-in image tool",
             "tool_name": "image_gen",

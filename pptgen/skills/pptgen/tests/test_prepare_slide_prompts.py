@@ -15,6 +15,41 @@ PREPARE_SCRIPT = SKILL_ROOT / "scripts" / "prepare_slide_prompts.py"
 
 
 class PrepareSlidePromptsCliTests(unittest.TestCase):
+    def test_default_page_worker_capacity_is_30(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "default-capacity-deck"
+            spec_path = workspace / "deck_spec.json"
+            workspace.mkdir(parents=True)
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "deck_name": "default-capacity-deck",
+                        "selected_image_backend": "built-in image tool",
+                        "slides": [{"number": 1, "title": "Overview"}],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PREPARE_SCRIPT),
+                    "--spec",
+                    str(spec_path),
+                    "--out-dir",
+                    str(workspace),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
+            self.assertEqual(jobs["max_concurrent_slides"], 30)
+
     def test_planned_data_chart_becomes_required_slide_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "growth-deck"

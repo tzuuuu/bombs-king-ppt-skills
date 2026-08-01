@@ -158,6 +158,15 @@ class SkillInformationHierarchyTests(unittest.TestCase):
         for marker in ("Gate 6", "Gate 7", "Gate 8"):
             self.assertIn(marker, self.subagent_reference)
 
+    def test_production_contract_fills_and_refills_page_worker_slots(self) -> None:
+        for marker in (
+            "default page-worker capacity is 30",
+            "fill the slots that are available",
+            "immediately dispatch the next pending slide",
+            "idle-page violation",
+        ):
+            self.assertIn(marker, self.subagent_reference)
+
 
 if __name__ == "__main__":
     unittest.main()

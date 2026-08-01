@@ -63,15 +63,15 @@ When a slide job declares any `data_charts`, read `data-charts.md` before prepar
 
 ### Gate 6 — page-scoped package preparation
 
-When package, strict-asset, or context preparation is independent by page, fan out one subagent per page and run all independent page tasks in parallel. Each worker returns its page-scoped artifacts and evidence; the parent owns shared `deck_spec.json` assembly, manifest merge, and final validation. If no page-scoped work exists, keep the shared setup in the parent.
+When package, strict-asset, or context preparation is independent by page, fan out one subagent per page and fill every available slot with independent page tasks. Each worker returns its page-scoped artifacts and evidence; the parent owns shared `deck_spec.json` assembly, manifest merge, and final validation. If no page-scoped work exists, keep the shared setup in the parent.
 
 ### Gate 7 — page generation
 
-After prompt preparation, fan out one slide subagent per remaining page up to `dispatch_slots_available`. Record dispatch immediately, collect candidates in parallel, and record each selected result. This is the production contract described in `Parallel Slide Generation With Subagents` below.
+After prompt preparation, fan out one slide subagent per pending page until either no pending page remains or `dispatch_slots_available` reaches zero. Record dispatch immediately, collect candidates in parallel, and record each selected result. This is the production contract described in `Parallel Slide Generation With Subagents` below.
 
 ### Gate 8 — page QA and repair
 
-Fan out one QA subagent per final page. Each worker returns the complete checklist, evidence, and—when needed—a replacement candidate generated with the locked backend. Independent page repairs may run in parallel. The parent consolidates findings, selects replacements, records results, and owns the final handoff validation.
+Fan out one QA subagent per final page and fill every available slot. Each worker returns the complete checklist, evidence, and—when needed—a replacement candidate generated with the locked backend. Independent page repairs may run in parallel. The parent consolidates findings, selects replacements, records results, and owns the final handoff validation.
 
 Use a structured visual brief for each slide. Image generation works best when the prompt separates canvas, style, layout, text, visual elements, and constraints instead of relying only on a long style paragraph.
 
@@ -147,6 +147,12 @@ After the user approves the sample slide and full-deck generation is authorized,
 
 Use the slide state scripts as the dispatch contract: the main agent spawns workers, then records dispatch and result state. A slide is not considered dispatched or complete until the relevant script records it.
 
+The default page-worker capacity is 30. Treat this as the requested maximum for the deck workflow; the active runtime may expose fewer usable subagent slots. Always fill the slots that are available:
+
+- At the start of production, dispatch one worker for every pending slide until either all pending slides are dispatched or `dispatch_slots_available` is zero. Launch independent workers in the same parallel wave rather than waiting after each spawn.
+- After every worker returns, record its result or blocker first, then immediately dispatch the next pending slide into the freed slot. A pending slide is allowed to remain pending only while no page-worker slot is available or a recorded runtime blocker prevents dispatch.
+- Before leaving the production gate, run `slide_job_status.py`. Any pending slide together with an available dispatch slot is an idle-page violation and requires another dispatch pass.
+
 Parent agent responsibilities:
 
 - Own `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, `prompts/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
@@ -158,9 +164,9 @@ Parent agent responsibilities:
 - If the approved sample slide already exists and should not be regenerated, mark that slide in `deck_spec.json` with `sample_approved: true` or `approved_sample: true` before running `prepare_slide_prompts.py`; the helper records it as `accepted` when the final image file exists.
 - In built-in `image_gen` mode, ensure every slide-level required local source image has already been inspected with `view_image` before any delegated job that depends on it.
 - In CLI/API fallback mode, ensure each JSON job lists the required source images and that the selected CLI path can use them; if the CLI path cannot attach input images for a slide, do not delegate that slide as a text-only replacement for the asset.
-- Spawn subagents with exactly one slide job each, up to `dispatch_slots_available`.
+- Spawn subagents with exactly one slide job each, filling every available slot up to `dispatch_slots_available`.
 - Immediately after each successful spawn, run `record_slide_dispatch.py` with the real agent id and prompt path.
-- After each worker returns, visually check its selected output, then run `record_slide_result.py` to copy the selected generated image into `origin_image/slide_XX.png` and record backend provenance.
+- After each worker returns, visually check its selected output, then run `record_slide_result.py` or `record_slide_blocker.py` before refilling the freed slot with the next pending slide.
 - If a worker cannot use the selected image backend or cannot access required input images, run `record_slide_blocker.py` and report the blocker.
 
 Subagent responsibilities:

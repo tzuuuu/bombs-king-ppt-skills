@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 
 from slide_run_state import (
+    dispatch_slots_available,
     deck_dir_from_target,
     find_slide,
     locked_jobs,
@@ -33,6 +34,12 @@ def main() -> int:
         slide = find_slide(jobs, args.slide)
         if slide.get("status") != "pending":
             raise SystemExit(f"{slide['slide_id']} must be pending before dispatch; got {slide.get('status')}")
+        slots_available = dispatch_slots_available(jobs)
+        if slots_available < 1:
+            raise SystemExit(
+                "No slide dispatch slot is available; record a returned result or blocker "
+                "before dispatching another worker."
+            )
 
         prompt_ref = args.prompt_file or slide.get("job")
         if not prompt_ref:

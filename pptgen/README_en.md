@@ -45,7 +45,7 @@ For a basic introduction to skill design and usage, see [good-skill-design.pptx]
 - 12 built-in PPT style references: includes clean professional, scientific defense, Party-and-Government Red, Teaching Courseware, e-ink magazine, hand-drawn technical explainer, dashboard, McKinsey style, and more. The hand-drawn technical explainer style is a strong starting point if you do not want to write prompts.
 - Supports custom style replication: provide a favorite image, PDF, or PPT/PPTX, and the agent can analyze its color, layout, typography, and visual system before generating a new deck in that style.
 - Builds a reusable personal style library: once you like a deck style, ask the agent to save it into `~/.codex-ppt-skill/references/` so future decks can reuse it directly; the library lives outside the skill install, survives skill updates, and a personal style with the same name takes priority over the built-in one.
-- Supports parallel subagent generation: after the sample slide is approved, one subagent can handle one slide and self-check readability, style consistency, and content completeness before reporting issues for repair.
+- Supports parallel subagent generation: after the sample slide is approved, the skill targets up to 30 page workers by default, with one subagent per slide; it fills every available slot and immediately assigns the next pending slide when a worker returns so page jobs do not sit idle.
 - Supports required image insertion: assign paper figures, experiment charts, screenshots, architecture diagrams, or other images to specific slides, and the generated page will adapt the layout and theme around them.
 - Generates a speaker script: creates `speech.md` and preserves it in the Project Workspace for downstream reconstruction.
 - Delivers reproducible Data Charts: every numerical chart includes its Python generator, exact CSV/JSON snapshot, transparent render, and manifest entry.
@@ -215,7 +215,7 @@ The skill follows this workflow:
 6. Create the Project Workspace.
 7. Generate the Python source, exact data snapshot, transparent PNG, and manifest entry for every planned Data Chart.
 8. Prepare self-contained slide jobs with chart renders as required visual context.
-9. Generate all slide images one by one with the same image backend.
+9. Generate every dispatchable slide image in parallel with the same image backend, then immediately refill each slot as a worker returns.
 10. Check text readability, style consistency, and content completeness.
 11. Generate `speech.md`.
 12. Validate the Project Workspace and hand it off with the Slide Image Set and Chart Source Packages.

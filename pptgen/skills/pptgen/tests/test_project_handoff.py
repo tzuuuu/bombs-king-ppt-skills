@@ -330,6 +330,75 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(handoff.returncode, 0, handoff.stderr)
             self.assertEqual(json.loads(handoff.stdout)["status"], "ready_for_handoff")
 
+    def test_dispatch_rejects_an_idle_slot_overflow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "dispatch-capacity"
+            workspace.mkdir(parents=True)
+            spec_path = workspace / "deck_spec.json"
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "deck_name": "dispatch-capacity",
+                        "selected_image_backend": "built-in image tool",
+                        "slides": [
+                            {"number": 1, "title": "First"},
+                            {"number": 2, "title": "Second"},
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            prepare = subprocess.run(
+                [
+                    sys.executable,
+                    str(PREPARE_SCRIPT),
+                    "--spec",
+                    str(spec_path),
+                    "--out-dir",
+                    str(workspace),
+                    "--max-concurrent-slides",
+                    "1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(prepare.returncode, 0, prepare.stderr)
+
+            first = subprocess.run(
+                [
+                    sys.executable,
+                    str(DISPATCH_SCRIPT),
+                    str(workspace),
+                    "--slide",
+                    "1",
+                    "--agent-id",
+                    "agent-1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            second = subprocess.run(
+                [
+                    sys.executable,
+                    str(DISPATCH_SCRIPT),
+                    str(workspace),
+                    "--slide",
+                    "2",
+                    "--agent-id",
+                    "agent-2",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(second.returncode, 0)
+            self.assertIn("No slide dispatch slot is available", second.stderr)
+
     def test_validate_rejects_opaque_chart_render(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = self.create_slide_only_workspace(Path(temp_dir))

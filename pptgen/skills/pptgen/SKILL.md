@@ -64,15 +64,15 @@ Run these gates in numbered order. Before creating artifacts or reporting progre
    **Complete when:** the user approves the page and the recorded method identifies the actual backend, tool, mode, prompt source, approved image, and available generation settings.
 
 6. **Package gate — build reproducible inputs.**
-   Prepare strict user assets per `docs/user-supplied-assets.md`. When the approved outline plans any Data Chart, read `docs/data-charts.md` and finish every Chart Source Package and the deck-level `chart_manifest.json` before prompt preparation. When page-scoped package, asset, or context tasks are independent, use subagents to parallelize all of them by page; keep shared manifest assembly and validation in the parent.
+   Prepare strict user assets per `docs/user-supplied-assets.md`. When the approved outline plans any Data Chart, read `docs/data-charts.md` and finish every Chart Source Package and the deck-level `chart_manifest.json` before prompt preparation. When page-scoped package, asset, or context tasks are independent, use subagents to parallelize all of them by page and fill every available slot; keep shared manifest assembly and validation in the parent.
    **Complete when:** `deck_spec.json` declares every planned page, every strict asset exists at its recorded path, and every delivered chart reproduces from its local snapshot.
 
 7. **Production gate — prepare, dispatch, and record every page.**
-   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Prepare self-contained slide jobs, then use one subagent per remaining page to parallelize all independent page generations up to the available slots. Inspect returned candidates and record every outcome through the disclosed state contract.
+   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Prepare self-contained slide jobs, then parallelize by filling every available dispatch slot with exactly one subagent per pending page; dispatch the next pending page immediately whenever a worker returns. Inspect returned candidates and record every outcome through the disclosed state contract.
    **Complete when:** `slide_job_status.py` shows every generated page as `recorded`, approved samples as `accepted`, and no page as `pending`, `dispatched`, or `blocked`.
 
 8. **QA gate — inspect and repair the Slide Image Set.**
-   Follow `docs/project-handoff-and-reporting.md`. Use one QA subagent per final page to parallelize the complete page checklist; independent repair candidates may also run in parallel through the locked backend. The parent consolidates QA, selects replacements, and records the final state. For fallback editing commands, consult `docs/cli-api-fallback.md`.
+   Follow `docs/project-handoff-and-reporting.md`. Use one QA subagent per final page and fill every available slot; independent repair candidates may also run in parallel through the locked backend. The parent consolidates QA, selects replacements, and records the final state. For fallback editing commands, consult `docs/cli-api-fallback.md`.
    **Complete when:** every expected `slide_XX.png` passes the full checklist and rejected variants remain outside `origin_image/`.
 
 9. **Handoff gate — validate the terminal artifact.**

@@ -56,7 +56,7 @@ Generate the full deck only after the sample slide is approved.
 
 ## Stage 6: Batch Generation
 
-After the sample slide is approved, the agent generates `origin_image/slide_XX.png` one slide at a time. In environments that support sub-agents, one sub-agent generates each slide in parallel to speed up multi-slide production. Every slide follows the same style and image-generation backend approved for the sample.
+After the sample slide is approved, the agent assigns one sub-agent to every pending slide and fills all available worker slots; the skill's default page-worker capacity is 30. When a worker returns, the agent records the result immediately and refills the freed slot with the next pending slide so neither available capacity nor page jobs sit idle. Every slide follows the same style and image-generation backend approved for the sample.
 
 ## Stage 7: Quality Review and Fixes
 

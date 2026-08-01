@@ -18,7 +18,7 @@ from filelock import FileLock
 ACTIVE_SLIDE_STATUSES = {"dispatched"}
 DISPATCHABLE_SLIDE_STATUSES = {"pending"}
 TERMINAL_SLIDE_STATUSES = {"recorded", "accepted", "blocked"}
-DEFAULT_MAX_CONCURRENT_SLIDES = 6
+DEFAULT_MAX_CONCURRENT_SLIDES = 30
 
 
 def now_iso() -> str:
