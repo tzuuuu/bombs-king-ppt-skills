@@ -20,6 +20,8 @@ from powerpoint_native_render.render import (  # noqa: E402
     MACOS_DISCOVER_APPLESCRIPT,
     MACOS_APPLESCRIPT,
     MACOS_CLEANUP_APPLESCRIPT,
+    MACOS_GUI_EXPORT_APPLESCRIPT,
+    MACOS_GUI_CLEANUP_APPLESCRIPT,
     AutomationRunner,
     MacPowerPointExporter,
     PowerPointLauncher,
@@ -148,7 +150,17 @@ class TimeoutThenCleanupRunner(AutomationRunner):
             )
         if script == MACOS_APPLESCRIPT:
             raise subprocess.TimeoutExpired("osascript", timeout)
-        return subprocess.CompletedProcess(["osascript"], 0, "", "")
+        return subprocess.CompletedProcess(["osascript"], 0, "closed 1\n", "")
+
+
+class TimeoutThenZeroCleanupRunner(TimeoutThenCleanupRunner):
+    def run(
+        self, script: str, arguments: list[str], *, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        if script == MACOS_CLEANUP_APPLESCRIPT:
+            self.scripts.append(script)
+            return subprocess.CompletedProcess(["osascript"], 0, "closed 0\n", "")
+        return super().run(script, arguments, timeout=timeout)
 
 
 class DiscoveryTimeoutThenCleanupRunner(AutomationRunner):
@@ -164,6 +176,17 @@ class DiscoveryTimeoutThenCleanupRunner(AutomationRunner):
         if script == MACOS_CLEANUP_APPLESCRIPT:
             return subprocess.CompletedProcess(["osascript"], 0, "closed\n", "")
         raise AssertionError("export should not run after discovery fails")
+
+
+class EmptyDiscoveryThenCleanupRunner(AutomationRunner):
+    def run(
+        self, script: str, arguments: list[str], *, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        if script == MACOS_DISCOVER_APPLESCRIPT:
+            return subprocess.CompletedProcess(["osascript"], 0, "", "")
+        if script == MACOS_CLEANUP_APPLESCRIPT:
+            return subprocess.CompletedProcess(["osascript"], 0, "closed\n", "")
+        raise AssertionError("export should not run before discovery succeeds")
 
 
 class SuccessfulStagedExportRunner(AutomationRunner):
@@ -185,7 +208,150 @@ class SuccessfulStagedExportRunner(AutomationRunner):
         raise AssertionError("cleanup should not run after a successful export")
 
 
+class ScriptingComponentThenGuiRunner(AutomationRunner):
+    def __init__(self, source: Path) -> None:
+        self.source = source
+        self.scripts: list[str] = []
+        self.gui_arguments: list[str] = []
+
+    def run(
+        self, script: str, arguments: list[str], *, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        self.scripts.append(script)
+        if script == MACOS_DISCOVER_APPLESCRIPT:
+            return subprocess.CompletedProcess(
+                ["osascript"], 0, f"{self.source}\x1e", ""
+            )
+        if script == MACOS_APPLESCRIPT:
+            return subprocess.CompletedProcess(
+                ["osascript"],
+                1,
+                "",
+                "Microsoft PowerPoint got an error: scripting component error. (-1750)\n",
+            )
+        if script == MACOS_GUI_EXPORT_APPLESCRIPT:
+            self.gui_arguments = arguments
+            (Path(arguments[1]) / arguments[2]).write_bytes(b"%PDF-native-gui")
+            return subprocess.CompletedProcess(["osascript"], 0, "16.test-gui\n", "")
+        if script == MACOS_GUI_CLEANUP_APPLESCRIPT:
+            return subprocess.CompletedProcess(["osascript"], 0, "closed\n", "")
+        raise AssertionError("unexpected automation script")
+
+
 class RenderWorkflowTests(unittest.TestCase):
+    def test_macos_known_target_requires_cleanup_to_close_a_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            source = Path("/private/tmp/run/snapshot/source.pptx")
+            runner = TimeoutThenZeroCleanupRunner(source)
+            exporter = MacPowerPointExporter(
+                runner=runner,
+                launcher=RecordingLauncher(),
+                osascript="/usr/bin/osascript",
+                staging_root=Path(temporary_directory) / "staging",
+            )
+
+            with self.assertRaises(RenderFailure) as caught:
+                exporter.export(
+                    source,
+                    Path("/private/tmp/run/powerpoint-export.pdf"),
+                    settle_seconds=3,
+                    timeout=30,
+                )
+
+            self.assertEqual(caught.exception.code, "POWERPOINT_CLEANUP_FAILED")
+            self.assertEqual(
+                list((Path(temporary_directory) / "staging").glob("*")),
+                [],
+            )
+
+    def test_one_slide_fixture_contains_a_speaker_notes_sentinel(self) -> None:
+        fixture = PACKAGE_ROOT / "tests" / "fixtures" / "one-slide.pptx"
+
+        with zipfile.ZipFile(fixture) as archive:
+            notes_xml = archive.read("ppt/notesSlides/notesSlide1.xml")
+
+        self.assertIn(b"SPEAKER_NOTES_MUST_NOT_APPEAR_9F3A", notes_xml)
+
+    def test_macos_target_not_yet_visible_is_transient(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source.pptx"
+            source.write_bytes(b"source")
+            exporter = MacPowerPointExporter(
+                runner=EmptyDiscoveryThenCleanupRunner(),
+                launcher=RecordingLauncher(),
+                osascript="/usr/bin/osascript",
+                staging_root=root / "staging",
+                stability_poll_seconds=0,
+            )
+
+            with self.assertRaises(RenderFailure) as caught:
+                exporter.export(
+                    source,
+                    root / "powerpoint-export.pdf",
+                    settle_seconds=3,
+                    timeout=30,
+                )
+
+            self.assertEqual(caught.exception.code, "POWERPOINT_TARGET_NOT_FOUND")
+            self.assertTrue(caught.exception.transient)
+
+    def test_macos_uses_accessible_native_export_when_save_as_pdf_is_broken(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "source.pptx"
+            source.write_bytes(b"source")
+            destination = root / "artifacts" / "powerpoint-export.pdf"
+            destination.parent.mkdir()
+            runner = ScriptingComponentThenGuiRunner(source)
+            launcher = RecordingLauncher()
+            exporter = MacPowerPointExporter(
+                runner=runner,
+                launcher=launcher,
+                osascript="/usr/bin/osascript",
+                staging_root=root / "powerpoint-container",
+                gui_staging_root=root / "gui-staging",
+                stability_poll_seconds=0,
+            )
+
+            result = exporter.export(
+                source,
+                destination,
+                settle_seconds=3,
+                timeout=30,
+            )
+
+            self.assertEqual(result.powerpoint_version, "16.test-gui")
+            self.assertEqual(destination.read_bytes(), b"%PDF-native-gui")
+            self.assertEqual(
+                runner.scripts,
+                [
+                    MACOS_DISCOVER_APPLESCRIPT,
+                    MACOS_APPLESCRIPT,
+                    MACOS_GUI_EXPORT_APPLESCRIPT,
+                    MACOS_GUI_CLEANUP_APPLESCRIPT,
+                ],
+            )
+            self.assertEqual(runner.gui_arguments[0], str(source))
+            self.assertTrue(
+                Path(runner.gui_arguments[1]).is_relative_to(root / "gui-staging")
+            )
+            self.assertEqual(runner.gui_arguments[2], "powerpoint-export.pdf")
+            self.assertIn("click menu bar item 3", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn('perform action "AXPress"', MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn("sheet 1 of window 1", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn("GoToWindow", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn("PathTextField", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn("CGEventPost", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertIn("kCGSessionEventTap", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertNotIn("close targetDeck", MACOS_GUI_EXPORT_APPLESCRIPT)
+            self.assertNotIn("notes", MACOS_GUI_EXPORT_APPLESCRIPT.lower())
+            self.assertIn("AXCloseButton", MACOS_GUI_CLEANUP_APPLESCRIPT)
+            self.assertIn("targetWindow", MACOS_GUI_CLEANUP_APPLESCRIPT)
+            self.assertIn("targetWindowName", MACOS_GUI_CLEANUP_APPLESCRIPT)
+            self.assertIn("action-button--998", MACOS_GUI_CLEANUP_APPLESCRIPT)
+            self.assertNotIn("notes", MACOS_GUI_CLEANUP_APPLESCRIPT.lower())
+
     def test_render_cli_wraps_workspace_filesystem_errors_as_json(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -321,6 +487,10 @@ class RenderWorkflowTests(unittest.TestCase):
             self.assertNotIn("open source", MACOS_APPLESCRIPT)
             self.assertNotIn("last presentation", MACOS_APPLESCRIPT)
             self.assertNotIn("print notes pages", MACOS_APPLESCRIPT)
+            self.assertIn(
+                "close (first presentation whose full name is targetFullName)",
+                MACOS_CLEANUP_APPLESCRIPT,
+            )
 
     def test_render_cli_reports_a_structured_error_on_stdout(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -389,6 +559,8 @@ class RenderWorkflowTests(unittest.TestCase):
             snapshot = exporter.sources[0]
             self.assertTrue(snapshot.is_absolute())
             self.assertNotEqual(snapshot, source.resolve())
+            self.assertTrue(snapshot.name.startswith("source-"))
+            self.assertNotEqual(snapshot.name, "source.pptx")
             self.assertTrue(snapshot.is_relative_to(workspace.resolve()))
             self.assertEqual(hashlib.sha256(snapshot.read_bytes()).hexdigest(), original_hash)
             self.assertEqual(exporter.settle_seconds, [4.5])

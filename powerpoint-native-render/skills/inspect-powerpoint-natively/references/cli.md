@@ -34,6 +34,8 @@ powerpoint-native-render render /absolute/path/deck.pptx \
 
 Use `--settle-seconds` from 0 through 30, `--timeout` from 30 through 900 seconds per attempt, and `--dpi` from 72 through 600. Expect at most one retry for a classified transient failure.
 
+On macOS, allow the terminal or agent host under **System Settings > Privacy & Security > Accessibility**. PowerPoint versions that reject the direct `save as PDF` scripting command fall back to PowerPoint's own native Export UI; the CLI never substitutes another slide renderer.
+
 On success, use the absolute paths in the versioned JSON response to locate the immutable snapshot, unchanged `powerpoint-export.pdf`, `inspection.pdf`, ordered PNG pages, and `render.json`. Do not inspect or claim anything from those artifacts until the later `verify` command succeeds.
 
 On failure, follow `repair_action` and stop. Never accept a stale PDF, an interactive PowerPoint prompt, an unclosed test snapshot, or an artifact path from a prior run as evidence for the requested source.

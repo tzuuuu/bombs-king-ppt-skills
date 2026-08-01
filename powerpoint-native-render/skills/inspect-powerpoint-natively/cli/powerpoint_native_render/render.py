@@ -30,17 +30,145 @@ on run argv
             save targetDeck in destinationPathText as save as PDF
             set appVersion to Version
             close targetDeck saving no
-            set targetDeck to missing value
             return appVersion
         on error errorMessage number errorNumber
-            if targetDeck is not missing value then
-                try
-                    close targetDeck saving no
-                end try
-            end if
             error errorMessage number errorNumber
         end try
     end tell
+end run
+'''
+
+MACOS_GUI_EXPORT_APPLESCRIPT = r'''
+on run argv
+    set targetFullName to item 1 of argv
+    set destinationDirectoryText to item 2 of argv
+    set destinationName to item 3 of argv
+
+    tell application "Microsoft PowerPoint"
+        set targetDeck to first presentation whose full name is targetFullName
+        if full name of active presentation is not targetFullName then
+            error "The exact snapshot is not the active PowerPoint presentation" number 1713
+        end if
+        activate
+    end tell
+
+    tell application "System Events"
+        tell process "Microsoft PowerPoint"
+            set frontmost to true
+            click menu bar item 3 of menu bar 1
+            delay 0.2
+            set exportCommand to menu item 10 of menu 1 of menu bar item 3 of menu bar 1
+            if enabled of exportCommand is false then
+                error "PowerPoint's native Export command is disabled" number 1714
+            end if
+            perform action "AXPress" of exportCommand
+
+            set exportPanel to missing value
+            repeat with checkIndex from 1 to 100
+                if (count of sheets of window 1) > 0 then
+                    set candidatePanel to sheet 1 of window 1
+                    if value of attribute "AXIdentifier" of candidatePanel is "save-panel" then
+                        set exportPanel to candidatePanel
+                        exit repeat
+                    end if
+                end if
+                delay 0.1
+            end repeat
+            if exportPanel is missing value then
+                error "PowerPoint's native Export panel did not appear" number 1712
+            end if
+
+            key code 5 using {command down, shift down}
+            set goToPanel to missing value
+            repeat with checkIndex from 1 to 100
+                if (count of sheets of exportPanel) > 0 then
+                    set candidatePanel to sheet 1 of exportPanel
+                    if value of attribute "AXIdentifier" of candidatePanel is "GoToWindow" then
+                        set goToPanel to candidatePanel
+                        exit repeat
+                    end if
+                end if
+                delay 0.1
+            end repeat
+            if goToPanel is missing value then
+                error "The macOS Go to Folder panel did not appear" number 1712
+            end if
+            set pathField to value of attribute "AXFocusedUIElement"
+            if value of attribute "AXIdentifier" of pathField is not "PathTextField" then
+                error "The macOS Go to Folder path field is not focused" number 1712
+            end if
+            set value of pathField to destinationDirectoryText
+            delay 0.5
+            do shell script "/usr/bin/osascript -l JavaScript -e 'ObjC.import(\"ApplicationServices\"); var down = $.CGEventCreateKeyboardEvent(null, 36, true); var up = $.CGEventCreateKeyboardEvent(null, 36, false); $.CGEventPost($.kCGSessionEventTap, down); $.CGEventPost($.kCGSessionEventTap, up);'"
+            repeat with checkIndex from 1 to 100
+                if (count of sheets of exportPanel) is 0 then exit repeat
+                delay 0.1
+            end repeat
+            if (count of sheets of exportPanel) > 0 then
+                error "The macOS Go to Folder panel did not close" number 1712
+            end if
+
+            set panelBody to splitter group 1 of exportPanel
+            set formatControl to pop up button 1 of group 2 of panelBody
+            if value of formatControl is not "PDF" then
+                error "PowerPoint's native Export format is not PDF" number 1715
+            end if
+            set value of (first text field of panelBody whose value of attribute "AXIdentifier" is "saveAsNameTextField") to destinationName
+            click (first button of panelBody whose value of attribute "AXIdentifier" is "OKButton")
+
+            repeat with checkIndex from 1 to 100
+                if (count of sheets of window 1) is 0 then
+                    exit repeat
+                end if
+                delay 0.1
+            end repeat
+            if (count of sheets of window 1) > 0 then
+                error "PowerPoint's native Export panel did not close" number 1712
+            end if
+        end tell
+    end tell
+
+    delay 1
+    tell application "Microsoft PowerPoint" to return Version
+end run
+'''
+
+MACOS_GUI_CLEANUP_APPLESCRIPT = r'''
+on run argv
+    set targetFullName to item 1 of argv
+    tell application "Microsoft PowerPoint"
+        if full name of active presentation is not targetFullName then
+            error "The exact exported snapshot is not active for cleanup" number 1713
+        end if
+        activate
+    end tell
+    tell application "System Events"
+        tell process "Microsoft PowerPoint"
+            set targetWindow to window 1
+            set targetWindowName to name of targetWindow
+            perform action "AXPress" of (first button of targetWindow whose subrole is "AXCloseButton")
+            delay 0.5
+            set targetWindowHasSheet to false
+            try
+                set targetWindowHasSheet to (count of sheets of targetWindow) > 0
+            end try
+            if targetWindowHasSheet then
+                try
+                    set warningSheet to sheet 1 of targetWindow
+                    click (first button of warningSheet whose value of attribute "AXIdentifier" is "action-button--998")
+                end try
+            end if
+            repeat with checkIndex from 1 to 100
+                set currentWindowNames to name of every window
+                if currentWindowNames does not contain targetWindowName then exit repeat
+                delay 0.1
+            end repeat
+            if (name of every window) contains targetWindowName then
+                error "PowerPoint did not close the exact exported snapshot window" number 1716
+            end if
+        end tell
+    end tell
+    return "closed"
 end run
 '''
 
@@ -55,14 +183,15 @@ return joinedNames
 
 MACOS_CLEANUP_APPLESCRIPT = r'''
 on run argv
+    set closedCount to 0
     tell application "Microsoft PowerPoint"
         repeat with targetFullName in argv
             if exists (first presentation whose full name is targetFullName) then
                 close (first presentation whose full name is targetFullName) saving no
-                return "closed"
+                set closedCount to closedCount + 1
             end if
         end repeat
-        error "PowerPoint did not expose any exact snapshot cleanup candidate" number 1708
+        return "closed " & closedCount
     end tell
 end run
 '''
@@ -209,6 +338,7 @@ class MacPowerPointExporter(PowerPointExporter):
         launcher: Optional[PowerPointLauncher] = None,
         osascript: Optional[str] = None,
         staging_root: Optional[Path] = None,
+        gui_staging_root: Optional[Path] = None,
         stability_poll_seconds: float = 0.25,
     ) -> None:
         command = osascript or shutil.which("osascript")
@@ -224,6 +354,9 @@ class MacPowerPointExporter(PowerPointExporter):
             / "Data"
             / "tmp"
             / "powerpoint-native-render"
+        )
+        self.gui_staging_root = gui_staging_root or (
+            Path("/private/tmp") / "powerpoint-native-render"
         )
         self.stability_poll_seconds = stability_poll_seconds
 
@@ -260,7 +393,13 @@ class MacPowerPointExporter(PowerPointExporter):
         except OSError:
             pass
 
-    def _cleanup(self, target_full_names: List[str], *, timeout: int) -> None:
+    def _cleanup(
+        self,
+        target_full_names: List[str],
+        *,
+        timeout: int,
+        require_match: bool = True,
+    ) -> None:
         if self.runner is None:
             return
         try:
@@ -280,6 +419,62 @@ class MacPowerPointExporter(PowerPointExporter):
             raise RenderFailure(
                 "POWERPOINT_CLEANUP_FAILED",
                 f"Could not close the exact snapshot after export failed: {detail}",
+                "Close only the read-only snapshot shown in PowerPoint, then retry.",
+            )
+        if require_match:
+            try:
+                closed_count = int(cleanup.stdout.strip().split()[-1])
+            except (IndexError, ValueError) as error:
+                raise RenderFailure(
+                    "POWERPOINT_CLEANUP_FAILED",
+                    "PowerPoint cleanup did not report how many exact snapshots it closed.",
+                    "Close only the read-only snapshot shown in PowerPoint, then retry.",
+                ) from error
+            if closed_count < 1:
+                raise RenderFailure(
+                    "POWERPOINT_CLEANUP_FAILED",
+                    "PowerPoint cleanup did not close the known exact snapshot.",
+                    "Close only the read-only snapshot shown in PowerPoint, then retry.",
+                )
+
+    def _cleanup_failed_export(
+        self,
+        target_full_names: List[str],
+        staging_pdfs: List[Path],
+        *,
+        timeout: int,
+        require_match: bool = True,
+    ) -> None:
+        try:
+            self._cleanup(
+                target_full_names,
+                timeout=timeout,
+                require_match=require_match,
+            )
+        finally:
+            for staging_pdf in staging_pdfs:
+                self._remove_staged_export(staging_pdf)
+
+    def _cleanup_gui_export(self, target_full_name: str, *, timeout: int) -> None:
+        if self.runner is None:
+            return
+        try:
+            cleanup = self.runner.run(
+                MACOS_GUI_CLEANUP_APPLESCRIPT,
+                [target_full_name],
+                timeout=min(timeout, 15),
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            raise RenderFailure(
+                "POWERPOINT_CLEANUP_FAILED",
+                f"Could not close the exact snapshot after native UI export: {error}",
+                "Close only the read-only snapshot shown in PowerPoint, then retry.",
+            ) from error
+        if cleanup.returncode != 0:
+            detail = (cleanup.stderr or cleanup.stdout or "cleanup failed").strip()
+            raise RenderFailure(
+                "POWERPOINT_CLEANUP_FAILED",
+                f"Could not close the exact snapshot after native UI export: {detail}",
                 "Close only the read-only snapshot shown in PowerPoint, then retry.",
             )
 
@@ -329,6 +524,7 @@ class MacPowerPointExporter(PowerPointExporter):
             "POWERPOINT_TARGET_NOT_FOUND",
             "PowerPoint did not report the exact snapshot among its open presentations.",
             "Close any read-only test snapshot shown in PowerPoint, then retry.",
+            transient=True,
         )
 
     def export(
@@ -348,6 +544,11 @@ class MacPowerPointExporter(PowerPointExporter):
         deadline = time.monotonic() + timeout
         staging_directory = self.staging_root / uuid.uuid4().hex
         staging_pdf = staging_directory / "powerpoint-export.pdf"
+        gui_staging_directory = self.gui_staging_root / uuid.uuid4().hex
+        gui_staging_pdf = gui_staging_directory / "powerpoint-export.pdf"
+        actual_staging_pdf = staging_pdf
+        used_gui_export = False
+        cleanup_candidates = self._source_path_candidates(source)
         try:
             staging_directory.mkdir(parents=True, exist_ok=False)
         except OSError as error:
@@ -367,11 +568,12 @@ class MacPowerPointExporter(PowerPointExporter):
                 timeout=_remaining_seconds(deadline),
             )
         except RenderFailure:
-            self._cleanup(
+            self._cleanup_failed_export(
                 self._source_path_candidates(source),
+                [staging_pdf, gui_staging_pdf],
                 timeout=min(timeout, 15),
+                require_match=False,
             )
-            self._remove_staged_export(staging_pdf)
             raise
         try:
             result = self.runner.run(
@@ -383,8 +585,11 @@ class MacPowerPointExporter(PowerPointExporter):
                 timeout=_remaining_seconds(deadline),
             )
         except subprocess.TimeoutExpired as error:
-            self._cleanup([target_full_name], timeout=min(timeout, 15))
-            self._remove_staged_export(staging_pdf)
+            self._cleanup_failed_export(
+                cleanup_candidates,
+                [staging_pdf, gui_staging_pdf],
+                timeout=min(timeout, 15),
+            )
             raise RenderFailure(
                 "POWERPOINT_EXPORT_TIMEOUT",
                 f"PowerPoint export exceeded {timeout} seconds.",
@@ -392,18 +597,87 @@ class MacPowerPointExporter(PowerPointExporter):
                 transient=True,
             ) from error
         except OSError as error:
-            self._cleanup([target_full_name], timeout=min(timeout, 15))
-            self._remove_staged_export(staging_pdf)
+            self._cleanup_failed_export(
+                cleanup_candidates,
+                [staging_pdf, gui_staging_pdf],
+                timeout=min(timeout, 15),
+            )
             raise RenderFailure(
                 "AUTOMATION_UNAVAILABLE",
                 str(error),
                 "Restore osascript and run doctor again.",
             ) from error
 
+        native_detail = (result.stderr or result.stdout or "AppleScript failed").strip()
+        if result.returncode != 0 and "-1750" in native_detail:
+            used_gui_export = True
+            actual_staging_pdf = gui_staging_pdf
+            try:
+                gui_staging_directory.mkdir(parents=True, exist_ok=False)
+            except OSError as error:
+                self._cleanup_failed_export(
+                    cleanup_candidates,
+                    [staging_pdf, gui_staging_pdf],
+                    timeout=min(timeout, 15),
+                )
+                raise RenderFailure(
+                    "POWERPOINT_STAGING_UNAVAILABLE",
+                    f"Cannot create the native UI PDF staging directory: {error}",
+                    "Confirm /private/tmp is writable, then retry.",
+                ) from error
+            try:
+                result = self.runner.run(
+                    MACOS_GUI_EXPORT_APPLESCRIPT,
+                    [
+                        target_full_name,
+                        str(gui_staging_pdf.parent),
+                        gui_staging_pdf.name,
+                    ],
+                    timeout=_remaining_seconds(deadline),
+                )
+            except subprocess.TimeoutExpired as error:
+                self._cleanup_failed_export(
+                    cleanup_candidates,
+                    [staging_pdf, gui_staging_pdf],
+                    timeout=min(timeout, 15),
+                )
+                raise RenderFailure(
+                    "POWERPOINT_EXPORT_TIMEOUT",
+                    f"PowerPoint's native Export UI exceeded {timeout} seconds.",
+                    "Close blocking dialogs, confirm Accessibility access, and retry.",
+                    transient=True,
+                ) from error
+            except OSError as error:
+                self._cleanup_failed_export(
+                    cleanup_candidates,
+                    [staging_pdf, gui_staging_pdf],
+                    timeout=min(timeout, 15),
+                )
+                raise RenderFailure(
+                    "AUTOMATION_UNAVAILABLE",
+                    str(error),
+                    "Restore osascript and run doctor again.",
+                ) from error
+
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "AppleScript failed").strip()
-            self._cleanup([target_full_name], timeout=min(timeout, 15))
-            self._remove_staged_export(staging_pdf)
+            self._cleanup_failed_export(
+                cleanup_candidates,
+                [staging_pdf, gui_staging_pdf],
+                timeout=min(timeout, 15),
+            )
+            accessibility_markers = (
+                "-1743",
+                "assistive access",
+                "not authorized to send apple events",
+                "不允許輔助使用",
+            )
+            if any(marker.lower() in detail.lower() for marker in accessibility_markers):
+                raise RenderFailure(
+                    "POWERPOINT_GUI_AUTOMATION_UNAVAILABLE",
+                    detail,
+                    "Allow the host terminal or agent app under macOS Privacy & Security > Accessibility, then retry.",
+                )
             transient_markers = (
                 "-600",
                 "-609",
@@ -426,18 +700,23 @@ class MacPowerPointExporter(PowerPointExporter):
 
         try:
             self._wait_for_staged_pdf(
-                staging_pdf,
+                actual_staging_pdf,
                 timeout=_remaining_seconds(deadline),
             )
-            shutil.copyfile(staging_pdf, destination)
-            if _sha256(staging_pdf) != _sha256(destination):
+            shutil.copyfile(actual_staging_pdf, destination)
+            if _sha256(actual_staging_pdf) != _sha256(destination):
                 raise RenderFailure(
                     "NATIVE_PDF_COPY_MISMATCH",
                     "The retained native PDF differs from PowerPoint's staged export.",
                     "Delete the incomplete run and retry.",
                 )
         finally:
-            self._remove_staged_export(staging_pdf)
+            try:
+                if used_gui_export:
+                    self._cleanup_gui_export(target_full_name, timeout=min(timeout, 15))
+            finally:
+                self._remove_staged_export(staging_pdf)
+                self._remove_staged_export(gui_staging_pdf)
 
         return ExportResult(
             engine="Microsoft PowerPoint for macOS",
@@ -617,7 +896,7 @@ def _render_presentation(
     run_directory = workspace / ".powerpoint-render-cache" / "runs" / run_id
     snapshot_directory = run_directory / "snapshot"
     snapshot_directory.mkdir(parents=True, exist_ok=False)
-    snapshot = snapshot_directory / f"source{source.suffix.lower()}"
+    snapshot = snapshot_directory / f"source-{run_id}{source.suffix.lower()}"
     shutil.copy2(source, snapshot)
     if _sha256(snapshot) != source_hash or _sha256(source) != source_hash:
         raise RenderFailure(
