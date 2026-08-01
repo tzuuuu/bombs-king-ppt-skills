@@ -70,12 +70,27 @@ class SkillInformationHierarchyTests(unittest.TestCase):
         chart_reference = SKILL_ROOT / "docs" / "data-charts.md"
         self.assertTrue(chart_reference.is_file())
         charts = chart_reference.read_text(encoding="utf-8")
+        sample_gate = workflow_gate(self.skill, "Sample gate")
         package_gate = workflow_gate(self.skill, "Package gate")
+        self.assertIn("docs/data-charts.md", sample_gate)
         self.assertIn("docs/data-charts.md", package_gate)
         for detail in ("Matplotlib", "pandas", "NumPy", "Seaborn", "Chart-only render"):
             self.assertNotIn(detail, self.skill)
         for detail in ("Matplotlib", "pandas", "NumPy", "Seaborn", "transparent PNG"):
             self.assertIn(detail, charts)
+
+    def test_sample_chart_package_precedes_sample_generation(self) -> None:
+        sample_gate = workflow_gate(self.skill, "Sample gate")
+        prerequisite = sample_gate.index("finish every Chart Source Package")
+        generation = sample_gate.index("generate exactly one representative")
+        self.assertLess(prerequisite, generation)
+        self.assertIn("before generating the sample", sample_gate)
+        self.assertIn("reproduces from its local snapshot", sample_gate)
+        self.assertIn("valid manifest entry", sample_gate)
+
+        charts = (SKILL_ROOT / "docs" / "data-charts.md").read_text(encoding="utf-8")
+        self.assertIn("during the Sample Gate before generating that sample", charts)
+        self.assertIn("remaining packages during the Package Gate", charts)
 
     def test_source_gate_requires_observable_brief_and_asset_inventory(self) -> None:
         source_gate = workflow_gate(self.skill, "Source gate")

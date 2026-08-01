@@ -1,6 +1,6 @@
 # Data Charts And Chart Source Packages
 
-Read this when the approved outline plans a Data Chart, before creating its package, manifest entry, or slide job.
+Read this when the approved outline plans a Data Chart. For a Data Chart on the selected sample page, complete its package and manifest entry during the Sample Gate before generating that sample. Complete all remaining packages during the Package Gate before prompt preparation.
 
 Every Data Chart is generated during the task from structured data. An image-only chart is not a substitute for its source data.
 

@@ -121,6 +121,7 @@ Sample slide requirements:
 - Use the confirmed style description.
 - Prefer a representative content slide over the cover when possible.
 - Demonstrate the intended deck rhythm: the sample should show how the chosen style adapts to a real content page, not just a generic fixed template.
+- Apply the Sample Gate's Data Chart prerequisite before image generation whenever the selected page plans a Data Chart; use the completed `chart.png` as required visual context.
 - Save it directly as the intended final slide filename, such as `{base_dir}/{deck_name}/origin_image/slide_08.png`. In CLI/API fallback mode, use `scripts/image_gen.py generate --out` for that exact path. Do not render a visible slide/page number in the image; keep the lower-right numbering area available for downstream numbering.
 - When a master template is present, include the selected `template/template-<N>.png` as a strict input and preserve its visible master structure.
 - Show the sample image to the user.

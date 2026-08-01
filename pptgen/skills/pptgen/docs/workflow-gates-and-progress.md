@@ -14,6 +14,7 @@ Read this before creating downstream artifacts or reporting progress. `SKILL.md`
 - Before outline approval, create no final `deck_spec.json`, `speech.md`, prompt job files, Chart Source Packages, slide images, or handoff state.
 - If you need an internal planning artifact before approval, name it with `.draft.` such as `deck_spec.draft.json` or `speech.draft.md`, and clearly report that it is not final.
 - Create downstream artifacts (`deck_spec.json`, `prompts/`, `slide_jobs.json`, Chart Source Packages, `chart_manifest.json`, `speech.md`, and final slide images) only at the gate that owns them.
+- Gate 5 owns Chart Source Packages and manifest entries for Data Charts used by the selected sample; those artifacts must be valid before the sample image is generated. Gate 6 owns every remaining planned chart package and the completed deck-level manifest.
 - When the deck uses required source images, keep style selection and image generation behind approval of the slide-to-image mapping.
 - If the user specifies a `.ppt` or `.pptx` master template, Gate 1 may create the source template package before outline approval: `template/template.pptx` or `template/template.ppt`, `template/template.pdf`, rendered `template/template-<N>.png` pages, and `template/template_manifest.json`. These are source/reference artifacts, not final slide images or an intermediate generated PPTX.
 
