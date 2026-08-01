@@ -1,0 +1,4 @@
+interface:
+  display_name: "Inspect PowerPoint Natively"
+  short_description: "Inspect PowerPoint through native rendering"
+  default_prompt: "Use $inspect-powerpoint-natively to inspect this PowerPoint through Microsoft PowerPoint rendering."

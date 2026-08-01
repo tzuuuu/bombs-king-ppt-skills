@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Installing the CLI from the skill directory exposes the documented command without depending on repository-root files.
 - [ ] The diagnostic command emits one versioned JSON object, uses stable success and failure exit codes, and reports platform, PowerPoint, Python, PDF runtime, and automation prerequisites without opening a presentation.
