@@ -1,6 +1,6 @@
 # Codex PPT Skill Documentation
 
-Codex PPT is a presentation-generation skill built for Codex. It also works with agents that support `SKILL.md`, including Claude Code, OpenClaw, and Hermes Agent. It turns articles, reports, papers, course notes, or rough ideas into image-based presentations: first planning the outline and visual style, then generating each complete slide as an image, and finally assembling the images into a `.pptx` file.
+Codex PPT is a full-slide image and Project Workspace generation skill built for Codex. It turns articles, reports, papers, course notes, or rough ideas into a validated Slide Image Set for downstream editable-PowerPoint reconstruction.
 
 ## How to Read This Documentation
 
@@ -31,7 +31,7 @@ If you are already using the skill and have encountered a problem, see the [FAQ]
 - Personal style library: Styles you like can be saved to `~/.codex-ppt-skill/references/`, outside the skill installation directory. They remain available after skill updates and can be reused by name in future projects.
 - Place specified source materials on designated slides: You can assign original paper figures, experiment results, architecture diagrams, or screenshots to specific slides.
 - Multiple agent environments: In addition to Codex, the skill works with agents that support `SKILL.md`, including Claude Code, OpenClaw, and Hermes Agent.
-- Automatic PowerPoint assembly: The skill generates `outline.md`, individual slide images, and `speech.md`, then assembles everything into a `.pptx` file.
+- Validated Project Workspace handoff: The skill retains `outline.md`, individual slide images, `speech.md`, run state, and reproducible Chart Source Packages without assembling an intermediate PPTX.
 - Third-party API support for text models and the `gpt-image-2` image-generation model.
 - Companion speaker notes: Speaker notes are generated and inserted into the PowerPoint notes pages by default.
 - Targeted post-generation edits for specific slides that need improvement. See the [FAQ](/en/faq.md).

@@ -4,7 +4,7 @@
 
 [![문서](https://img.shields.io/badge/%EB%AC%B8%EC%84%9C-%EC%82%AC%EC%9A%A9%20%EC%95%88%EB%82%B4-111827)](https://ningzimu.github.io/codex-ppt-skill/#/ko/) [![지원](https://img.shields.io/badge/%EC%A7%80%EC%9B%90-%EB%8F%84%EC%9B%80%EB%B0%9B%EA%B8%B0-2CA5E0)](https://t.me/CodexPPT) [![ClawHub](https://img.shields.io/badge/ClawHub-codex--ppt-cd3b35)](https://clawhub.ai/ningzimu/codex-ppt) [![ClawMama](https://img.shields.io/badge/ClawMama-codex--ppt-2CA5E0)](https://app.clawmama.run/skills/5lak48/hermes?utm_source=github&utm_medium=issue&utm_campaign=skill_outreach_ningzimu_codex_ppt_skill) [![GitHub stars](https://img.shields.io/github/stars/ningzimu/codex-ppt-skill?style=flat&logo=github&label=stars)](https://github.com/ningzimu/codex-ppt-skill/stargazers) [![GitHub forks](https://img.shields.io/github/forks/ningzimu/codex-ppt-skill?style=flat&logo=github&label=forks)](https://github.com/ningzimu/codex-ppt-skill/forks)
 
-PowerPoint 덱을 생성하는 Codex용 skill입니다. Codex 외에도 Claude Code, OpenClaw, Hermes Agent 등 `SKILL.md`를 지원하는 다른 에이전트에서도 사용할 수 있으며, 이런 비(非)Codex 환경에서는 보통 `gpt-image-2`, 서드파티 이미지 API, 또는 OpenAI 호환 이미지 생성 엔드포인트 설정이 필요합니다. 이 skill은 글, 리포트, 논문, 강의 노트 등의 원본 자료를 "한 페이지 통이미지" 형식의 프레젠테이션으로 변환합니다. 먼저 개요와 시각 스타일을 기획하고, 각 슬라이드를 전면 이미지로 생성한 뒤, 마지막에 로컬 스크립트로 이미지들을 `.pptx` 파일로 조립합니다.
+Codex용 전체 슬라이드 이미지 및 재현 가능한 Project Workspace 생성 skill입니다. 글, 리포트, 논문, 강의 노트 등을 검증된 Slide Image Set으로 변환하여 후속 편집 가능 PowerPoint 재구성 흐름에 전달합니다.
 
 ## 스폰서
 
@@ -47,11 +47,12 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 - 재사용 가능한 개인 스타일 라이브러리 구축: 덱 스타일이 마음에 들면 에이전트에게 `~/.codex-ppt-skill/references/`에 저장하도록 요청해 이후 덱에서 바로 재사용할 수 있습니다. 이 라이브러리는 skill 설치 밖에 있어 업데이트에도 유지되며, 같은 이름의 개인 스타일은 내장 스타일보다 우선합니다.
 - 병렬 서브에이전트 생성 지원: 샘플 슬라이드가 승인되면 하나의 서브에이전트가 슬라이드 하나를 담당하고, 가독성·스타일 일관성·내용 완결성을 자체 점검한 뒤 수정할 이슈를 보고할 수 있습니다.
 - 필수 이미지 삽입 지원: 논문 그림, 실험 차트, 스크린샷, 아키텍처 다이어그램 등을 특정 슬라이드에 지정하면, 생성된 페이지가 그 주위로 레이아웃과 테마를 맞춥니다.
-- 발표 노트 생성: `speech.md`를 만들고 PPTX 조립 시 각 슬라이드에 노트를 기록해, 발표하거나 수정하기 쉽게 합니다.
+- 발표 대본 생성: `speech.md`를 만들어 후속 재구성을 위해 Project Workspace에 보존합니다.
+- 재현 가능한 Data Chart 전달: 각 수치 차트에 Python 생성기, 실제 CSV/JSON 스냅샷, 투명 PNG 및 manifest 항목을 포함합니다.
 
 ## 출력 예시
 
-아래는 기술 공유 덱의 예시입니다. 각 페이지는 `gpt-image-2`로 생성한 완전한 16:9 슬라이드 이미지이며, 로컬 스크립트로 PPTX 파일로 조립됩니다.
+아래는 기술 공유 슬라이드의 예시입니다. 각 페이지는 `gpt-image-2`로 생성한 완전한 16:9 슬라이드 이미지이며 Slide Image Set으로 전달됩니다.
 
 ![생성된 PPT 예시](assets/slides_example.png)
 
@@ -79,7 +80,7 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 
 ## 출력 구조
 
-각 PPT는 독립된 프로젝트 디렉터리에 생성됩니다:
+각 작업은 독립된 Project Workspace에 생성됩니다:
 
 ```text
 {base_dir}/{deck_name}/     # 이 덱을 위한 독립 프로젝트 디렉터리
@@ -87,14 +88,19 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 │   ├── slide_01.png        # 1번 슬라이드 이미지
 │   ├── slide_02.png        # 2번 슬라이드 이미지
 │   └── ...                 # 이후 슬라이드 이미지, 슬라이드 순서대로 명명
+├── chart_assets/           # Data Chart별 Python, 데이터 스냅샷, PNG
+├── chart_manifest.json     # 슬라이드-차트 전달 manifest
+├── prompts/                # 자체 완결적인 슬라이드 작업
+├── slide_jobs.json         # 슬라이드 작업 및 결과 상태
+├── slide_run_state.json    # 재개 가능한 실행 상태
+├── deck_spec.json          # 확정된 구조화 덱 사양
 ├── outline.md              # 확정된 개요, 슬라이드 수, 제목, 핵심 포인트
-├── speech.md               # PPT에 기록되는 발표 노트
-└── {deck_name}.pptx        # 최종 조립된 PowerPoint 파일
+└── speech.md               # 후속 재구성을 위해 보존되는 발표 대본
 ```
 
 `origin_image/`로 각 슬라이드에 사용된 최종 이미지를 검토할 수 있습니다. 파일은 `slide_01.png`, `slide_02.png` 식으로 순서대로 명명되어, 덱을 시각적으로 미리 보거나 특정 슬라이드 하나만 수정 요청하기 쉽습니다.
 
-`speech.md`는 동반되는 발표 대본입니다. `.pptx`를 조립할 때 그 내용이 각 슬라이드의 발표 노트에 기록되므로, PowerPoint에서 발표하는 동안 바로 보거나, 편집하거나, 사용할 수 있습니다.
+`speech.md`는 후속 편집 가능 PowerPoint 재구성을 위해 보존되는 발표 대본입니다. PPTGen은 중간 PPTX를 조립하지 않습니다.
 
 ## 활용 사례
 
@@ -206,12 +212,14 @@ skill은 다음 워크플로를 따릅니다:
 3. 2~3개의 시각 스타일 옵션을 제시하고 하나를 추천해 사용자 확인을 받습니다.
 4. 첫 이미지 생성 전에 이미지 생성 백엔드를 밝히고 확인받습니다.
 5. 확정된 이미지 백엔드로 샘플 슬라이드 하나를 생성해 스타일, 레이아웃 리듬, 텍스트 품질을 승인받습니다.
-6. PPT 프로젝트 디렉터리를 만듭니다.
-7. 같은 이미지 백엔드로 모든 슬라이드 이미지를 하나씩 생성합니다.
-8. 텍스트 가독성, 스타일 일관성, 내용 완결성을 점검합니다.
-9. `speech.md`를 생성합니다.
-10. `assemble_ppt.py`로 `.pptx`를 조립합니다.
-11. 선택 사항: 생성된 PPT 스타일이 정말 마음에 들면 스타일 라이브러리에 저장합니다. 이미 내장 스타일을 사용했다면 다시 저장할 필요는 없습니다.
+6. Project Workspace를 만듭니다.
+7. 각 Data Chart의 Python 소스, 실제 데이터 스냅샷, 투명 PNG 및 manifest 항목을 생성합니다.
+8. 차트 렌더를 필수 시각 컨텍스트로 포함한 자체 완결적인 슬라이드 작업을 준비합니다.
+9. 같은 이미지 백엔드로 모든 슬라이드 이미지를 생성합니다.
+10. 텍스트 가독성, 스타일 일관성, 내용 완결성을 점검합니다.
+11. `speech.md`를 생성합니다.
+12. Project Workspace를 검증하고 Slide Image Set과 Chart Source Package를 전달합니다.
+13. 선택 사항: 사용자 정의 생성 스타일을 라이브러리에 저장합니다.
 
 ## 사용 팁
 

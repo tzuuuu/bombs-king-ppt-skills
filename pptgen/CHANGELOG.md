@@ -4,6 +4,10 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 ## Unreleased
 
+### Features
+
+- Replace intermediate image-based PPTX assembly with validated Project Workspace handoff, including reproducible Python-generated Data Chart source packages.
+
 ### Documentation
 
 - Replace the redundant QA and community sections with compact documentation, Telegram, and issue support links across all README language versions, and remove the obsolete community QR code. (#92)

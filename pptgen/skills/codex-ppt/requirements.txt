@@ -1,4 +1,7 @@
-python-pptx>=1.0.2
 Pillow>=10.0.0
 openai>=2.0.0
 filelock>=3.16.0
+matplotlib>=3.8.0
+pandas>=2.0.0
+numpy>=1.24.0
+seaborn>=0.13.0

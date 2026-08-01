@@ -11,7 +11,7 @@ That is why I split the process into several steps:
 3. Confirm the overall visual style
 4. Generate one sample slide to check whether the text, layout, and style are suitable
 5. After the sample is approved, generate the complete image-based presentation slide by slide
-6. Assemble the slides into a `.pptx` file and add the script to the notes for convenient presentation reference
+6. Validate and hand off the Project Workspace, retaining the speaker script for downstream reconstruction
 
 ## Why Generate an Image-Based Presentation First?
 

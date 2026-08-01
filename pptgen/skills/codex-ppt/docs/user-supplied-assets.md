@@ -1,8 +1,10 @@
 # User-Supplied Assets
 
-Read this before using paper figures, experiment result charts, screenshots, logos, or other assets that must appear in the deck.
+Read this before using paper figures, screenshots, logos, or other non-chart assets that must appear in the deck.
 
-When the user provides paper figures, experiment result charts, screenshots, logos, or other assets that must appear in the deck, treat them as source assets, not as loose visual inspiration.
+When the user provides paper figures, screenshots, logos, or other assets that must appear in the deck, treat them as source assets, not as loose visual inspiration.
+
+Data Charts are not image-only user-supplied assets in this workflow. Generate every Data Chart during the task from structured data and deliver its Python generator, exact CSV/JSON snapshot, transparent render, and chart manifest entry as described in `project-handoff-and-reporting.md`.
 
 Recommended project-local asset location:
 
@@ -25,7 +27,7 @@ For slides that must include a user-supplied figure:
 - In built-in `image_gen` mode, every source image must be visible in the conversation context before generating any slide that depends on it. User attachments and images generated earlier in the thread already qualify. For local image paths, inspect each required image with `view_image` first, then generate or edit the slide.
 - In built-in `image_gen` mode, `view_image` is the required way to make local image paths visible to the conversation before generation. It is not a filename parameter to `image_gen`; the generation prompt must still label the visible image by role, such as `Image 1: strict input asset` or `Image 2: approved sample slide style reference`.
 - Ask the model to preserve the supplied figure's data, labels, axes, colors, and visual content, and only compose the surrounding slide layout, title, captions, callouts, and background.
-- Do not ask the model to "redraw", "recreate", "imagine", or "generate a similar chart" for result figures unless the user explicitly wants a stylized redraw.
+- Do not ask the model to redraw or invent numerical Data Charts. Use the accurate Chart Source Package render as required visual context.
 - After generation, inspect the output and ask the user to pay special attention to whether required figures were used correctly.
 
 Example prompt fragment for a result-figure slide:

@@ -9,6 +9,7 @@ Generate one image per slide with the selected image backend. Every final `slide
 After the outline, visual style, image backend, and sample slide have all been approved, create final downstream artifacts if they do not already exist:
 
 - `deck_spec.json`
+- Chart Source Packages and `chart_manifest.json` when Data Charts are planned
 - `prompts/slide_XX.json`
 - `speech.md`
 
@@ -53,6 +54,14 @@ The goal is not to make subagents validate missing context. The goal is for the 
 `slide_jobs.json` is the dispatch state file. It records each slide's prompt job, final output path, status, selected backend, sample generation method, subagent dispatch metadata, result provenance, and blocker state. Do not hand-edit slide statuses; use the bundled status scripts.
 
 `deck_spec.json` may express `required_images` either as structured objects or as Markdown image reference strings. The helper extracts the image path from strings such as `strict input asset\n\n![Result 01](assets/figures/result_01.png)` and carries the surrounding text / alt text into the image role.
+
+## Data Chart Context
+
+Declare each planned chart id in its slide's `data_charts` list. Before running `prepare_slide_prompts.py`, create the matching Chart Source Package and `chart_manifest.json` entry according to `project-handoff-and-reporting.md`.
+
+The helper validates complete package coverage and adds the transparent chart render to `input_images` with a Data Chart role. It rejects missing or unplanned packages, duplicate or unknown identities, opaque renders, placement metadata, and paths outside the Project Workspace. The chart render is required visual context for the image backend, while the Python generator and data snapshot remain required downstream handoff artifacts.
+
+The worker generates the complete slide. It must not edit the Chart Source Package, invent replacement values, reserve an empty chart region, or locally composite the accurate chart render into the page.
 
 Use a structured visual brief for each slide. Image generation works best when the prompt separates canvas, style, layout, text, visual elements, and constraints instead of relying only on a long style paragraph.
 
@@ -130,7 +139,7 @@ Use the slide state scripts as the dispatch contract: the main agent spawns work
 
 Parent agent responsibilities:
 
-- Own `outline.md`, `deck_spec.json`, `prompts/`, `origin_image/`, QA, `speech.md`, and final PPT assembly.
+- Own `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, `prompts/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
 - Run `prepare_slide_prompts.py` or otherwise write full per-slide JSON jobs and `slide_jobs.json` before delegation.
 - Run `slide_job_status.py` to see dispatch slots and pending slide ids before each batch.
 - Ensure the approved sample slide is included in every non-sample job as a style-only input image when available.
@@ -155,7 +164,7 @@ Subagent responsibilities:
 - Inspect the generated candidate for text quality, style consistency, required-image inclusion, and layout issues before returning it.
 - Return only the selected original generated image path, the backend used, and a one-sentence QA note.
 
-Subagents must not edit `outline.md`, `deck_spec.json`, other slide job files, `origin_image/`, `speech.md`, or the final `.pptx`. The parent agent alone records selected outputs and performs final assembly.
+Subagents must not edit `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, other slide job files, `origin_image/`, or `speech.md`. The parent agent alone records selected outputs and validates the final handoff.
 
 Do not continue sequentially after the sample if subagents are part of the confirmed full-generation workflow and cannot be used. Stop and report the blocker, unless the user explicitly changes the requirement.
 
@@ -215,6 +224,6 @@ Final slide image naming rules:
 - Use zero-padded two-digit numbers for normal decks.
 - The approved sample slide should already have the correct `slide_XX.png` filename and should be reused directly.
 - Keep rejected variants, drafts, or reference images out of `origin_image/`. If you need to preserve them, place them in the project root or a separate `drafts/` directory.
-- Before assembling, verify every expected `slide_XX.png` exists in `origin_image/`, there are no missing or extra final slide images, and `slide_job_status.py` shows all non-sample slide jobs as `recorded`.
+- Before handoff, verify every expected `slide_XX.png` exists in `origin_image/`, there are no missing or extra final slide images, `slide_job_status.py` shows all non-sample slide jobs as `recorded`, and `project_handoff.py validate` succeeds.
 
 For Chinese decks, explicitly ask the image backend to render Chinese text accurately and avoid garbled characters.

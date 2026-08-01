@@ -123,7 +123,7 @@ Sample slide requirements:
 - Show the sample image to the user.
 - Ask the user to confirm the visual style, typography, layout density, and Chinese text quality.
 
-Do not generate the full deck until the user approves the sample slide. If the user requests changes, revise the style description and regenerate that same `slide_XX.png` file first. Once approved, keep that file as the final slide for its page. Do not create `sample_slide.png` in `origin_image/`, because the assembly step is designed around final `slide_XX` filenames.
+Do not generate the full deck until the user approves the sample slide. If the user requests changes, revise the style description and regenerate that same `slide_XX.png` file first. Once approved, keep that file as the final slide for its page. Do not create `sample_slide.png` in `origin_image/`; the Slide Image Set and handoff validator accept only final `slide_XX` filenames.
 
 After the sample slide is approved, record the sample generation method in `deck_spec.json` before preparing full-deck jobs. This is the contract the parent passes to subagents so they use the same image-generation path as the sample, not a cheaper local rendering path. Include at least:
 

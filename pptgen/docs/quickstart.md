@@ -32,4 +32,5 @@
 - `outline.md`：PPT 大纲
 - `origin_image/slide_XX.png`：每页正式图片
 - `speech.md`：每页演讲备注
-- `{PPT名称}.pptx`：最终 PowerPoint 文件
+- `origin_image/`：按顺序命名的最终幻灯片图片集
+- `chart_assets/` 与 `chart_manifest.json`：存在数据图表时的可重现交接物

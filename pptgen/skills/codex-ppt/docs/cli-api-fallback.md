@@ -6,7 +6,7 @@ Let `{skill_root}` mean the directory containing `SKILL.md`.
 
 ## Runtime Setup
 
-CLI/API fallback commands use the shared runtime environment. Before running `scripts/assemble_ppt.py` or fallback image commands, make sure the shared runtime exists. If `~/.codex-ppt-skill/.venv/bin/python` is missing, or if importing script dependencies fails, create or refresh the environment:
+CLI/API fallback commands and Project Workspace handoff validation use the shared runtime environment. Before running fallback image or handoff commands, make sure the shared runtime exists. If `~/.codex-ppt-skill/.venv/bin/python` is missing, or if importing script dependencies fails, create or refresh the environment:
 
 ```bash
 python3 {skill_root}/scripts/codex_ppt_runtime.py bootstrap
@@ -76,7 +76,7 @@ Transparent-background requests:
 
 ## Assembly And Doctor
 
-`assemble_ppt.py` supports `16:9` and `4:3`. Use `16:9` unless the user requests otherwise.
+Full-slide image generation defaults to 16:9. Use another aspect ratio only when the user requests it and the selected image backend supports it.
 
 Run the API doctor only when troubleshooting fallback API access:
 

@@ -26,7 +26,7 @@ The agent generates `outline.md`, which usually includes:
 - Optional visual ideas
 - Required image assets and how they will be used
 
-No final slide images, `speech.md`, or `.pptx` file should be generated before the outline is approved.
+No final slide images, Chart Source Packages, or `speech.md` should be generated before the outline is approved.
 
 ## Stage 3: Confirm the Visual Style
 
@@ -58,11 +58,11 @@ After the sample slide is approved, the agent generates `origin_image/slide_XX.p
 
 ## Stage 7: Quality Review and Fixes
 
-Before assembly, the agent reviews every slide for text clarity, consistency with the outline, clipped content, visual consistency, unnecessary page numbers, and overlapping elements. Slides with serious issues are regenerated using stricter prompts, while minor local issues are preferably corrected with targeted image-editing tools.
+Before handoff, the agent reviews every slide for text clarity, consistency with the outline, clipped content, visual consistency, unnecessary page numbers, overlapping elements, and visible required Data Charts. Slides with serious issues are regenerated using stricter prompts, while minor local issues are preferably corrected with targeted image-editing tools.
 
-## Stage 8: Speaker Notes and Assembly
+## Stage 8: Speaker Script and Project Workspace Handoff
 
-The agent generates the speaker notes in `speech.md`, then uses `assemble_ppt.py` to assemble the presentation into a `.pptx` file. The speaker notes are automatically added to the notes section of each slide.
+The agent generates `speech.md`, retains it for downstream reconstruction, and runs the Project Workspace handoff validator. PPTGen does not assemble an intermediate PPTX. When Data Charts exist, every planned chart must have a valid Python generator, exact CSV/JSON snapshot, transparent PNG, and chart manifest entry before handoff succeeds.
 
 ## Stage 9 (Optional): Save the Style
 

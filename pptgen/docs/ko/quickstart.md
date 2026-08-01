@@ -32,4 +32,5 @@ codex-ppt skill을 사용해서 이 기술 문서를 12페이지 분량의 한�
 - `outline.md`: PPT 개요
 - `origin_image/slide_XX.png`: 각 슬라이드의 최종 이미지
 - `speech.md`: 각 슬라이드의 발표 메모
-- `{PPT名称}.pptx`: 최종 PowerPoint 파일
+- `origin_image/`: 순서대로 이름 지정된 최종 Slide Image Set
+- `chart_assets/` 및 `chart_manifest.json`: Data Chart가 있을 때의 재현 가능한 전달 자료

@@ -14,6 +14,7 @@ import re
 import sys
 from typing import Any, Dict, Iterable, List, Optional
 
+from chart_manifest import ChartManifestError, load_chart_manifest
 from slide_run_state import (
     DEFAULT_MAX_CONCURRENT_SLIDES,
     now_iso,
@@ -184,6 +185,7 @@ def _build_prompt(
     slide: Dict[str, Any],
     number: int,
     global_style_reference: Optional[Dict[str, Any]],
+    chart_images: List[Dict[str, Any]],
     base_dir: Path,
 ) -> str:
     title = str(slide.get("title") or f"Slide {number}").strip()
@@ -192,6 +194,7 @@ def _build_prompt(
     if global_style_reference:
         images.append(global_style_reference)
     images.extend(_slide_images(slide, slide_number=number, base_dir=base_dir))
+    images.extend(chart_images)
     required_background = {
         key: value
         for key, value in {
@@ -247,6 +250,15 @@ def _build_prompt(
             "its exact layout unless this slide's layout explicitly asks for it.\n"
         )
 
+    if chart_images:
+        prompt_parts.append(
+            "## Chart Source Package Rule\n"
+            "Each Data Chart input is the accurate render from a reproducible Chart Source Package. "
+            "Use it as required visual context in the complete slide layout. Preserve its chart meaning "
+            "and visual identity; do not invent replacement values. The image backend still generates "
+            "the complete page: do not reserve a placeholder and do not use local compositing.\n"
+        )
+
     if images:
         prompt_parts.append(
             "## Input Image Handling Rules\n"
@@ -271,13 +283,44 @@ def _job_images(
     *,
     number: int,
     global_style_reference: Optional[Dict[str, Any]],
+    chart_images: List[Dict[str, Any]],
     base_dir: Path,
 ) -> List[Dict[str, Any]]:
     images: List[Dict[str, Any]] = []
     if global_style_reference:
         images.append(global_style_reference)
     images.extend(_slide_images(slide, slide_number=number, base_dir=base_dir))
+    images.extend(chart_images)
     return images
+
+
+def _planned_chart_ids(slide: Dict[str, Any], *, slide_id: str) -> List[str]:
+    chart_ids: List[str] = []
+    for entry in _as_list(slide.get("data_charts")):
+        value = entry.get("chart_id") if isinstance(entry, dict) else entry
+        if not isinstance(value, str) or not value.strip():
+            _die(f"{slide_id}: every data_charts entry must identify a chart_id.")
+        chart_id = value.strip()
+        if chart_id in chart_ids:
+            _die(f"{slide_id}: duplicate planned Data Chart: {chart_id}")
+        chart_ids.append(chart_id)
+    return chart_ids
+
+
+def _chart_job_context(charts: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    images: List[Dict[str, Any]] = []
+    metadata: List[Dict[str, Any]] = []
+    for chart in charts:
+        images.append(
+            {
+                "path": chart["resolved_package"]["image"],
+                "role": f"Data Chart: {chart['semantic_purpose']}",
+                "fidelity": "required numerical source; preserve chart meaning and visual identity",
+                "chart_id": chart["chart_id"],
+            }
+        )
+        metadata.append({key: value for key, value in chart.items() if key != "resolved_package"})
+    return images, metadata
 
 
 def _write_template(path: Path) -> None:
@@ -335,6 +378,7 @@ def _write_template(path: Path) -> None:
                 "role": "data evidence",
                 "intent": "Explain a supplied result figure",
                 "key_points": ["Preserve the original figure", "Add two callouts"],
+                "data_charts": ["chart_01"],
                 "required_images": [
                     {
                         "path": "/absolute/path/to/result_01.png",
@@ -400,6 +444,38 @@ def main() -> int:
     prompts_dir = out_dir / "prompts"
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "origin_image").mkdir(parents=True, exist_ok=True)
+    (out_dir / "chart_assets").mkdir(parents=True, exist_ok=True)
+
+    planned_identities: set[tuple[str, str]] = set()
+    slide_ids = {f"slide_{number:02d}" for _, _, number in numbered_slides}
+    planned_by_slide: Dict[str, List[str]] = {}
+    for _, slide, number in numbered_slides:
+        slide_id = f"slide_{number:02d}"
+        planned_by_slide[slide_id] = _planned_chart_ids(slide, slide_id=slide_id)
+        planned_identities.update((slide_id, chart_id) for chart_id in planned_by_slide[slide_id])
+    try:
+        _, manifest_charts = load_chart_manifest(
+            out_dir,
+            slide_ids,
+            required=bool(planned_identities),
+        )
+    except ChartManifestError as exc:
+        _die(str(exc))
+    charts_by_identity = {
+        (chart["slide_id"], chart["chart_id"]): chart for chart in manifest_charts
+    }
+    missing_charts = sorted(planned_identities - set(charts_by_identity))
+    if missing_charts:
+        _die(
+            "Planned Data Charts are missing Chart Source Packages: "
+            + ", ".join(f"{slide_id}/{chart_id}" for slide_id, chart_id in missing_charts)
+        )
+    unplanned_charts = sorted(set(charts_by_identity) - planned_identities)
+    if unplanned_charts:
+        _die(
+            "Chart manifest contains unplanned Data Charts: "
+            + ", ".join(f"{slide_id}/{chart_id}" for slide_id, chart_id in unplanned_charts)
+        )
 
     global_style_reference = spec.get("approved_style_reference")
     if global_style_reference is not None and not isinstance(global_style_reference, dict):
@@ -423,6 +499,11 @@ def main() -> int:
     slide_job_entries: List[Dict[str, Any]] = []
 
     for fallback, slide, number in numbered_slides:
+        slide_id = f"slide_{number:02d}"
+        slide_charts = [
+            charts_by_identity[(slide_id, chart_id)] for chart_id in planned_by_slide[slide_id]
+        ]
+        chart_images, chart_metadata = _chart_job_context(slide_charts)
         use_style_reference = bool(slide.get("use_approved_style_reference", True))
         slide_style_reference = global_style_reference if use_style_reference else None
         prompt = _build_prompt(
@@ -430,15 +511,23 @@ def main() -> int:
             slide=slide,
             number=number,
             global_style_reference=slide_style_reference,
+            chart_images=chart_images,
             base_dir=spec_dir,
         )
-        images = _job_images(slide, number=number, global_style_reference=slide_style_reference, base_dir=spec_dir)
+        images = _job_images(
+            slide,
+            number=number,
+            global_style_reference=slide_style_reference,
+            chart_images=chart_images,
+            base_dir=spec_dir,
+        )
         job = {
             "slide": number,
             "title": slide.get("title", f"Slide {number}"),
             "prompt": prompt,
             "out": f"slide_{number:02d}.png",
             "input_images": images,
+            "data_charts": chart_metadata,
             "requires_context_images": bool(images),
             "expected_backend": selected_backend,
             "sample_generation_method": sample_generation_method,
@@ -459,7 +548,6 @@ def main() -> int:
         if prompt_path.exists() and not args.force:
             _die(f"Slide job file already exists: {prompt_path} (use --force)")
         prompt_path.write_text(json.dumps(job, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        slide_id = f"slide_{number:02d}"
         final_image = out_dir / "origin_image" / f"{slide_id}.png"
         sample_approved = bool(slide.get("sample_approved") or slide.get("approved_sample"))
         status = "accepted" if sample_approved and final_image.exists() else "pending"
@@ -471,6 +559,7 @@ def main() -> int:
                 "job": rel_to_deck(out_dir, prompt_path),
                 "out": rel_to_deck(out_dir, final_image),
                 "input_images": images,
+                "data_charts": chart_metadata,
                 "requires_context_images": bool(images),
                 "status": status,
                 "dispatch": None,

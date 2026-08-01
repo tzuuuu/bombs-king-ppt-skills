@@ -1,6 +1,6 @@
 # Codex PPT Skill 문서
 
-Codex PPT는 Codex용 PPT 생성 skill이며, Claude Code, OpenClaw, Hermes Agent 등 `SKILL.md`를 지원하는 agent에서도 사용할 수 있습니다. 글, 보고서, 논문, 수업 노트 또는 거친 아이디어를 이미지형 프레젠테이션으로 변환합니다. 먼저 개요와 시각 스타일을 설계하고, 각 슬라이드의 완성 이미지를 차례로 생성한 뒤, 마지막으로 `.pptx` 파일로 조립합니다.
+Codex PPT는 Codex용 전체 슬라이드 이미지 및 Project Workspace 생성 skill입니다. 글, 보고서, 논문, 수업 노트 또는 거친 아이디어를 검증된 Slide Image Set으로 변환하여 후속 편집 가능 PowerPoint 재구성에 전달합니다.
 
 ## 문서 읽는 순서
 
@@ -17,7 +17,7 @@ Codex PPT는 Codex용 PPT 생성 skill이며, Claude Code, OpenClaw, Hermes Agen
 - [빠른 시작](/ko/quickstart.md): 처음 사용할 때의 가장 짧은 절차, 예시 명령과 결과물 안내.
 - [설계 철학](/ko/design.md): 이미지형 PPT, 단계별 확인, 두 skill의 역할 분담을 채택한 이유.
 - [설치 및 설정](/ko/installation.md): Codex, OpenClaw, Claude Code, Hermes Agent의 설치 및 업데이트 방법과 API/CLI fallback 설정.
-- [표준 워크플로](/ko/workflow.md): 개요 확인, 스타일 확인, 백엔드 확인, 샘플 슬라이드 확인부터 전체 생성과 조립까지의 완전한 과정.
+- [표준 워크플로](/ko/workflow.md): 개요, 스타일, 백엔드, 샘플 슬라이드 확인부터 전체 생성과 Project Workspace 전달까지의 과정.
 - [스타일 및 개인 스타일 라이브러리](/ko/styles.md): 12가지 내장 스타일 미리보기, 참고 자료의 스타일 재현, 마음에 드는 스타일을 개인 스타일 라이브러리에 저장해 장기적으로 재사용하는 방법.
 - [자주 묻는 질문](/ko/faq.md): 편집 가능 여부, API key, 샘플 슬라이드, 이미지 삽입, 개별 슬라이드 수정 등 자주 묻는 문제.
 - [예시 프롬프트](/ko/prompts.md): 글을 PPT로 변환, 논문 발표, 경영진 보고, 스타일 지정, 개별 슬라이드 수정 등에 바로 재사용할 수 있는 프롬프트.
@@ -31,7 +31,7 @@ Codex PPT는 Codex용 PPT 생성 skill이며, Claude Code, OpenClaw, Hermes Agen
 - 개인 스타일 라이브러리 축적: 마음에 드는 스타일을 `~/.codex-ppt-skill/references/`에 저장할 수 있습니다. skill 설치 디렉터리 외부에 보관되므로 skill을 업데이트해도 사라지지 않으며, 이후 이름으로 바로 재사용할 수 있습니다.
 - 지정 이미지 삽입: 논문 원본 이미지, 실험 결과 그래프, 아키텍처 다이어그램 또는 스크린샷을 특정 슬라이드에 사용하도록 지정할 수 있습니다.
 - 여러 agent 환경 지원: Codex 외에도 Claude Code, OpenClaw, Hermes Agent 등 `SKILL.md`를 지원하는 agent에서 사용할 수 있습니다.
-- PowerPoint 자동 조립: `outline.md`, 각 슬라이드 이미지, `speech.md`를 생성하고 최종적으로 `.pptx` 파일로 조립합니다.
+- 검증된 Project Workspace 전달: `outline.md`, 각 슬라이드 이미지, `speech.md`, 실행 상태 및 재현 가능한 Chart Source Package를 보존하고 중간 PPTX를 조립하지 않습니다.
 - 서드파티 API를 통한 텍스트 모델 및 `gpt-image-2` 이미지 생성 모델 사용 지원.
 - PPT 발표 대본 생성을 지원하며, 기본적으로 PPT 메모 영역에 자동 삽입합니다.
 - 생성 후 만족스럽지 않은 특정 슬라이드만 선택적으로 수정할 수 있습니다. 자세한 내용은 [자주 묻는 질문](/ko/faq.md)을 참고하세요.

@@ -2,7 +2,7 @@
 
 ## Q: Is the Generated Presentation Editable?
 
-No. Codex PPT generates image-based presentations in which every slide is a complete slide image. The visual result is more consistent, but the text, charts, and shapes on a slide cannot be edited individually as they can in a traditional PowerPoint file. After generation, if you need to adjust the content or visuals, the recommended approach is to continue in the same conversation and ask the AI to revise the specific slide.
+No. Codex PPT generates a Slide Image Set in which every slide is one complete image. The visual result is more consistent, but its text and shapes are not individually editable. Reproducible Data Chart source packages are delivered separately for downstream reconstruction. To adjust the generated layout or visuals, continue in the same conversation and ask the AI to revise the specific slide.
 
 Unless necessary, do not convert the presentation into an editable format unless you have sufficient Codex credits.
 

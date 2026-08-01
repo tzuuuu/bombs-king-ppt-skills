@@ -32,4 +32,5 @@ You will usually receive:
 - `outline.md`: Presentation outline
 - `origin_image/slide_XX.png`: Final image for each slide
 - `speech.md`: Speaker notes for each slide
-- `{presentation-name}.pptx`: Final PowerPoint file
+- `origin_image/`: Final ordered Slide Image Set
+- `chart_assets/` and `chart_manifest.json`: Reproducible Data Chart handoff, when charts exist

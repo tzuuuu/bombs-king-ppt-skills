@@ -1,6 +1,6 @@
 # Codex PPT Skill 说明文档
 
-Codex PPT 是一个面向 Codex 的 PPT 生成 skill，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用。它把文章、报告、论文、课程笔记或粗略想法转换成图片式演示文稿：先规划大纲和视觉风格，再逐页生成完整幻灯片图片，最后组装成 `.pptx` 文件。
+Codex PPT 是一个面向 Codex 的整页幻灯片图片与项目工作区生成 skill。它把文章、报告、论文、课程笔记或粗略想法转换成经验证的幻灯片图片集，供后续可编辑 PowerPoint 重建使用。
 
 ## 这套文档怎么读
 
@@ -17,7 +17,7 @@ Codex PPT 是一个面向 Codex 的 PPT 生成 skill，也可在 Claude Code、O
 - [快速开始](quickstart.md)：第一次使用时的最短路径、示例命令和产物说明。
 - [设计理念](design.md)：为什么采用图片式 PPT、阶段确认和双 skill 分工的设计。
 - [安装与配置](installation.md)：Codex、OpenClaw、Claude Code、Hermes Agent 的安装与更新方式，以及 API/CLI fallback 配置。
-- [标准工作流](workflow.md)：从大纲确认、风格确认、后端确认、样张确认到整套生成和组装的完整流程。
+- [标准工作流](workflow.md)：从大纲、风格、后端、样张确认到整套生成与项目工作区交接的完整流程。
 - [风格与个人风格库](styles.md)：12 种内置风格预览、仿照参考材料复刻风格，以及把满意的风格保存到个人风格库长期复用。
 - [常见问题](faq.md)：可编辑性、API key、样张、素材插入、单页修改等高频问题。
 - [示例提示词](prompts.md)：文章转 PPT、论文答辩、管理层汇报、指定风格、修改单页等可直接复用的提示词。
@@ -31,7 +31,7 @@ Codex PPT 是一个面向 Codex 的 PPT 生成 skill，也可在 Claude Code、O
 - 可沉淀个人风格库：满意的风格可以保存到 `~/.codex-ppt-skill/references/`，存放在 skill 安装目录之外，更新 skill 不丢失，后续制作直接按名字复用。
 - 支持指定素材入页：可以把论文原图、实验结果图、架构图或截图指定到具体页面中使用。
 - 支持多 agent 环境：除 Codex 外，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用。
-- 自动组装 PowerPoint：生成 `outline.md`、每页图片、`speech.md`，并最终组装为 `.pptx` 文件。
+- 验证项目工作区交接：保留 `outline.md`、每页图片、`speech.md`、执行状态与可重现图表来源包，不组装中间 PPTX。
 - 支持通过第三方 API 使用文本模型和 `gpt-image-2` 生图模型。
 - 支持配套生成 PPT 演讲稿，默认会自动插入 PPT 备注页。
 - 支持生成后针对特定不满意的页面做定向修改，参见[常见问题](faq.md)。

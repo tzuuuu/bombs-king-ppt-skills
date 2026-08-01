@@ -4,7 +4,7 @@
 
 [![文档](https://img.shields.io/badge/%E6%96%87%E6%A1%A3-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97-111827)](https://ningzimu.github.io/codex-ppt-skill/#/) [![支持](https://img.shields.io/badge/%E6%94%AF%E6%8C%81-%E8%8E%B7%E5%8F%96%E5%B8%AE%E5%8A%A9-2CA5E0)](https://t.me/CodexPPT) [![ClawHub](https://img.shields.io/badge/ClawHub-codex--ppt-cd3b35)](https://clawhub.ai/ningzimu/codex-ppt) [![ClawMama](https://img.shields.io/badge/ClawMama-codex--ppt-2CA5E0)](https://app.clawmama.run/skills/5lak48/hermes?utm_source=github&utm_medium=issue&utm_campaign=skill_outreach_ningzimu_codex_ppt_skill) [![GitHub stars](https://img.shields.io/github/stars/ningzimu/codex-ppt-skill?style=flat&logo=github&label=stars)](https://github.com/ningzimu/codex-ppt-skill/stargazers) [![GitHub forks](https://img.shields.io/github/forks/ningzimu/codex-ppt-skill?style=flat&logo=github&label=forks)](https://github.com/ningzimu/codex-ppt-skill/forks)
 
-一个面向 Codex 的 PPT 生成 skill，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用；在这些非 Codex 环境中通常需要配置 `gpt-image-2`、第三方生图 API 或 OpenAI 兼容格式的生图接口。它把文章、报告、论文、课程笔记等内容转换成“整页图片式”的演示文稿：先规划大纲和视觉风格，再生成每页幻灯片图片，最后用本地脚本组装为 `.pptx`。
+一个面向 Codex 的整页幻灯片图片与可重现项目工作区生成 skill，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用。它把文章、报告、论文、课程笔记等内容转换成经验证的幻灯片图片集，供后续可编辑 PowerPoint 重建流程使用。
 
 ## 赞助
 
@@ -47,11 +47,12 @@
 - 可沉淀个人风格库：生成满意后，可以把当前风格保存到个人风格库（`~/.codex-ppt-skill/references/`），下次直接复用；风格库存放在 skill 安装目录之外，更新 skill 不会丢失，同名时个人风格优先于内置风格。
 - 多 agent 并发生成：样张确认后，支持一个子 agent 负责一页，并对文字清晰度、风格一致性和内容完整性做自检，发现问题及时返修。
 - 支持指定图片插入：可以要求某一页必须放入论文原图、实验结果图、截图、架构图等素材，并让页面围绕这些图片适配主题和版式。
-- 自动生成演讲稿：会生成 `speech.md`，并在组装 PPTX 时写入每页备注，方便直接演示或二次修改。
+- 自动生成演讲稿：会生成 `speech.md`，并保留在项目工作区中供后续重建使用。
+- 交付可重现数据图表：每张数值图表都包含 Python 生成器、实际 CSV/JSON 快照、透明 PNG 与 manifest 记录。
 
 ## 生成效果
 
-下面是一套技术分享 PPT 的生成效果示例。每页都是由 `gpt-image-2` 生成的完整 16:9 幻灯片图片，再由本地脚本组装为 PPTX。
+下面是一套技术分享幻灯片的生成效果示例。每页都是由 `gpt-image-2` 生成的完整 16:9 幻灯片图片，并作为幻灯片图片集交付。
 
 ![生成 PPT 效果示例](assets/slides_example.png)
 
@@ -79,7 +80,7 @@
 
 ## 输出结构
 
-每个 PPT 会生成一个独立项目目录：
+每次任务会生成一个独立项目工作区：
 
 ```text
 {基础目录}/{PPT名称}/        # 当前 PPT 的独立项目目录
@@ -87,14 +88,19 @@
 │   ├── slide_01.png        # 第 1 页幻灯片图片
 │   ├── slide_02.png        # 第 2 页幻灯片图片
 │   └── ...                 # 后续页面图片，按页码顺序命名
-├── outline.md              # 经确认的 PPT 大纲、页数、每页标题和要点
-├── speech.md               # 演讲稿，会写入 PPT 每页备注
-└── {PPT名称}.pptx          # 最终组装生成的 PowerPoint 文件
+├── chart_assets/           # 每张数据图表的 Python、数据快照与 PNG
+├── chart_manifest.json     # 幻灯片与图表交接清单
+├── prompts/                # 自包含幻灯片任务
+├── slide_jobs.json         # 幻灯片任务与结果状态
+├── slide_run_state.json    # 可续跑执行状态
+├── deck_spec.json          # 已确认的结构化规格
+├── outline.md              # 经确认的大纲、页数、标题和要点
+└── speech.md               # 供后续重建使用的演讲稿
 ```
 
 你可以在 `origin_image/` 里查看每一页最终采用的幻灯片图片，文件会按 `slide_01.png`、`slide_02.png` 这样的顺序排列。想预览整套 PPT 的视觉效果，或只挑某一页继续修改时，直接看这里最方便。
 
-`speech.md` 是配套演讲稿。生成 `.pptx` 时，这些内容会自动写入每页 PPT 的备注区，你可以在 PowerPoint 里直接查看、修改，或演示时作为讲稿使用。
+`speech.md` 是为后续可编辑 PowerPoint 重建保留的配套演讲稿。PPTGen 本身不组装中间 PPTX。
 
 ## 适用场景
 
@@ -206,12 +212,14 @@ skill 会按以下流程执行：
 3. 给出 2-3 个视觉风格选项，并推荐一个让用户确认
 4. 在首次生图前说明将使用的生图方式，并请求你确认
 5. 使用确认后的图片生成后端生成 1 页样张，让用户确认风格、版式节奏和文字质量
-6. 创建 PPT 项目目录
-7. 使用同一图片生成后端逐页生成全部幻灯片图片
-8. 检查文字清晰度、风格一致性和内容完整性
-9. 生成 `speech.md`
-10. 使用 `assemble_ppt.py` 组装 `.pptx`
-11. 可选：如果生成的 PPT 风格你很喜欢，可以保存到风格库；如果使用的是内置风格，则无需重复保存
+6. 创建项目工作区
+7. 为每张规划数据图表生成 Python、实际数据快照、透明 PNG 与 manifest 记录
+8. 准备自包含幻灯片任务，将图表渲染图作为必需视觉上下文
+9. 使用同一图片生成后端逐页生成幻灯片图片
+10. 检查文字清晰度、风格一致性和内容完整性
+11. 生成 `speech.md`
+12. 验证项目工作区，交付幻灯片图片集与图表来源包
+13. 可选：将自定义生成风格保存到风格库
 
 ## 使用技巧
 

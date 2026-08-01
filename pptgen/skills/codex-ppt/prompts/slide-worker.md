@@ -34,9 +34,15 @@ Forbidden for final slide image creation:
 - python-pptx/PptxGenJS/native PPT layout screenshots
 - manually composited text, card, chart, or image overlays
 
+For every input marked as a Data Chart:
+- use the supplied transparent chart render as required visual context in the complete page
+- preserve its chart meaning and visual identity; do not invent replacement values
+- do not edit its Chart Source Package or `chart_manifest.json`
+- do not reserve a placeholder and do not locally composite the chart into the final slide
+
 If you cannot use the selected image backend, stop and return `blocker=<reason>` instead of creating a lower-quality replacement.
 If you cannot follow the recorded sample generation method, stop and return `blocker=<reason>` instead of switching tools.
-Do not edit slide job files, origin_image, speech.md, or assemble the PPT.
+Do not edit slide job files, Chart Source Packages, chart_manifest.json, origin_image, or speech.md. The parent validates the Project Workspace handoff.
 
 Before returning, visually check:
 - Chinese text is readable and not garbled
