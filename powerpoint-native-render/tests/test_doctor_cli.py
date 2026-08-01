@@ -9,13 +9,58 @@ import sys
 import tempfile
 import unittest
 import venv
+from typing import Optional
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 CLI_ROOT = PACKAGE_ROOT / "skills" / "inspect-powerpoint-natively" / "cli"
 sys.path.insert(0, str(CLI_ROOT))
 
-from powerpoint_native_render.doctor import DoctorFacts, assess  # noqa: E402
+from powerpoint_native_render.doctor import (  # noqa: E402
+    DoctorFacts,
+    RuntimeProbe,
+    assess,
+    collect_facts,
+)
+
+
+class FakeProbe(RuntimeProbe):
+    def __init__(
+        self,
+        *,
+        system: str,
+        macos_powerpoint: Optional[str] = None,
+        windows_powerpoint: bool = False,
+        automation_command: Optional[str] = None,
+    ) -> None:
+        self._system = system
+        self._macos_powerpoint = macos_powerpoint
+        self._windows_powerpoint = windows_powerpoint
+        self._automation_command = automation_command
+
+    def system(self) -> str:
+        return self._system
+
+    def machine(self) -> str:
+        return "test-machine"
+
+    def python_version(self) -> str:
+        return "3.12.0"
+
+    def python_supported(self) -> bool:
+        return True
+
+    def pymupdf_available(self) -> bool:
+        return True
+
+    def find_macos_powerpoint(self) -> Optional[str]:
+        return self._macos_powerpoint
+
+    def windows_powerpoint_registered(self) -> bool:
+        return self._windows_powerpoint
+
+    def find_command(self, *names: str) -> Optional[str]:
+        return self._automation_command
 
 
 class DoctorCliTests(unittest.TestCase):
@@ -83,6 +128,45 @@ class DoctorCliTests(unittest.TestCase):
 
 
 class DoctorAssessmentTests(unittest.TestCase):
+    def test_collect_facts_uses_macos_adapter_discovery(self) -> None:
+        facts = collect_facts(
+            FakeProbe(
+                system="Darwin",
+                macos_powerpoint="/Users/test/Applications/Microsoft PowerPoint.app",
+                automation_command="/usr/bin/osascript",
+            )
+        )
+
+        self.assertTrue(facts.powerpoint_available)
+        self.assertEqual(
+            facts.powerpoint_detail,
+            "/Users/test/Applications/Microsoft PowerPoint.app",
+        )
+        self.assertTrue(facts.automation_available)
+
+    def test_collect_facts_uses_windows_adapter_discovery(self) -> None:
+        facts = collect_facts(
+            FakeProbe(
+                system="Windows",
+                windows_powerpoint=True,
+                automation_command="C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+            )
+        )
+
+        self.assertTrue(facts.powerpoint_available)
+        self.assertEqual(
+            facts.powerpoint_detail,
+            "PowerPoint.Application COM registration",
+        )
+        self.assertTrue(facts.automation_available)
+
+    def test_collect_facts_marks_linux_discovery_not_applicable(self) -> None:
+        facts = collect_facts(FakeProbe(system="Linux"))
+
+        self.assertFalse(facts.powerpoint_available)
+        self.assertEqual(facts.powerpoint_detail, "not applicable")
+        self.assertFalse(facts.automation_available)
+
     def test_supported_macos_and_windows_facts_are_healthy(self) -> None:
         for facts in (
             DoctorFacts(
@@ -112,6 +196,13 @@ class DoctorAssessmentTests(unittest.TestCase):
                 payload = assess(facts)
                 self.assertEqual(payload["status"], "ok")
                 self.assertNotIn("error_code", payload)
+                self.assertEqual(
+                    payload["automation_permission"]["state"], "unverified"
+                )
+                self.assertIn(
+                    "does not open PowerPoint",
+                    payload["automation_permission"]["detail"],
+                )
 
     def test_linux_is_an_unsupported_platform(self) -> None:
         payload = assess(
