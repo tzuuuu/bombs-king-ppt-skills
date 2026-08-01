@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print codex-ppt slide generation job status."""
+"""Print pptgen slide generation job status."""
 
 from __future__ import annotations
 

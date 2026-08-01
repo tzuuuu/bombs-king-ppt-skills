@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manage the cross-agent runtime for codex-ppt.
+"""Manage the cross-agent runtime for pptgen.
 
 The runtime lives outside any specific agent installation so Codex, Claude Code,
 OpenClaw, Hermes Agent, and other local agents can share one virtual
@@ -89,7 +89,7 @@ def _quote_env_value(value: str) -> str:
 def _write_env_file(path: Path, values: Dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
-        "# codex-ppt shared runtime configuration",
+        "# pptgen shared runtime configuration",
         "# Used by Codex, Claude Code, OpenClaw, Hermes Agent, and other local agents.",
     ]
     for key in ENV_FIELDS:
@@ -252,7 +252,7 @@ def _doctor(args: argparse.Namespace) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage the codex-ppt shared runtime")
+    parser = argparse.ArgumentParser(description="Manage the pptgen shared runtime")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     bootstrap = subparsers.add_parser("bootstrap", help="Create shared venv and install deps")

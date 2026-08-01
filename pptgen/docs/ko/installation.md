@@ -5,38 +5,38 @@
 아래 문장을 Codex에 직접 보내 설치를 맡기는 것을 권장합니다.
 
 ```text
-이 codex-ppt skill을 설치해 주세요. 링크: https://github.com/ningzimu/codex-ppt-skill
+이 pptgen skill을 설치해 주세요. 링크: https://github.com/ningzimu/codex-ppt-skill
 ```
 
 ## Codex 수동 설치
 
-명령줄에서 다음 명령을 실행해 `codex-ppt` skill을 Codex의 전역 skills 디렉터리에 설치합니다.
+명령줄에서 다음 명령을 실행해 `pptgen` skill을 Codex의 전역 skills 디렉터리에 설치합니다.
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent codex \
   --global
 ```
 
 설치 후 Codex를 재시작하면 새 skill이 적용됩니다.
 
-[GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases)에서 `codex-ppt-skill-v*.zip`을 다운로드해 압축을 푼 뒤, 그 안의 `codex-ppt` 폴더를 `~/.codex/skills/codex-ppt`에 넣고 Codex를 재시작하는 방법도 있습니다.
+[GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases)에서 `codex-ppt-skill-v*.zip`을 다운로드해 압축을 푼 뒤, 그 안의 `pptgen` 폴더를 `~/.codex/skills/pptgen`에 넣고 Codex를 재시작하는 방법도 있습니다.
 
 이 저장소를 로컬에서 개발하는 경우, 실시간으로 수정 사항을 테스트할 수 있도록 skill 디렉터리를 Codex skills 디렉터리에 심볼릭 링크로 연결할 수 있습니다.
 
 ```bash
 mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+ln -s /path/to/codex-ppt-skill/skills/pptgen ~/.codex/skills/pptgen
 ```
 
 ## OpenClaw 설치
 
 ```bash
-openclaw skills install codex-ppt
+openclaw skills install pptgen
 ```
 
-OpenClaw의 skill allowlist를 사용하는 경우 허용 목록에 `codex-ppt`를 추가해야 합니다.
+OpenClaw의 skill allowlist를 사용하는 경우 허용 목록에 `pptgen`를 추가해야 합니다.
 
 ## Claude Code / Hermes Agent
 
@@ -44,7 +44,7 @@ Claude Code:
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent claude-code \
   --global
 ```
@@ -53,22 +53,22 @@ Hermes Agent:
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent hermes-agent \
   --global
 ```
 
-일반적인 대상 디렉터리는 Claude Code의 경우 `~/.claude/skills/codex-ppt`, Hermes Agent의 경우 `~/.hermes/skills/codex-ppt`입니다. 로컬 개발 시에는 복사 대신 심볼릭 링크를 사용할 수도 있습니다.
+일반적인 대상 디렉터리는 Claude Code의 경우 `~/.claude/skills/pptgen`, Hermes Agent의 경우 `~/.hermes/skills/pptgen`입니다. 로컬 개발 시에는 복사 대신 심볼릭 링크를 사용할 수도 있습니다.
 
 ## skill 업데이트
 
 아래 문장을 사용 중인 agent에게 직접 보내 업데이트를 맡기는 것을 권장합니다.
 
 ```text
-codex-ppt skill을 최신 버전으로 업데이트해 주세요. 저장소: https://github.com/ningzimu/codex-ppt-skill
+pptgen skill을 최신 버전으로 업데이트해 주세요. 저장소: https://github.com/ningzimu/codex-ppt-skill
 ```
 
-수동으로 업데이트할 때는 위에서 해당 agent에 맞는 설치 명령을 다시 실행하면 설치된 skill이 최신 버전으로 덮어써집니다. 또는 [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases)에서 최신 `codex-ppt-skill-v*.zip`을 다운로드해 압축을 풀고 기존 `codex-ppt` 디렉터리를 교체할 수 있습니다. 업데이트 후 agent를 재시작하면 적용됩니다.
+수동으로 업데이트할 때는 위에서 해당 agent에 맞는 설치 명령을 다시 실행하면 설치된 skill이 최신 버전으로 덮어써집니다. 또는 [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases)에서 최신 `codex-ppt-skill-v*.zip`을 다운로드해 압축을 풀고 기존 `pptgen` 디렉터리를 교체할 수 있습니다. 업데이트 후 agent를 재시작하면 적용됩니다.
 
 업데이트는 안전합니다. API key 등의 런타임 설정은 `~/.codex-ppt-skill/.env`에, 개인 스타일 라이브러리는 `~/.codex-ppt-skill/references/`에 저장되며 모두 skill 설치 디렉터리 외부에 있습니다. 따라서 skill을 업데이트하거나 다시 설치해도 사라지지 않습니다. 각 버전의 변경 사항은 [Releases 페이지](https://github.com/ningzimu/codex-ppt-skill/releases) 또는 저장소의 `CHANGELOG.md`에서 확인할 수 있습니다.
 

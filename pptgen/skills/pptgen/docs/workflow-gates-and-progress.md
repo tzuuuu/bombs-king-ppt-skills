@@ -2,6 +2,12 @@
 
 Read this before creating downstream artifacts or reporting progress. `SKILL.md` owns the gate order and completion criteria; this reference owns artifact barriers and the user-visible projection of those gates.
 
+## Gate boundary protocol
+
+- Finish all planned actions inside the active Gate before requesting feedback; an in-Gate progress check is not a pause point.
+- When its completion criterion is satisfied, report the evidence and request one affirmative confirmation. That confirmation unlocks the next Gate.
+- After confirmation, execute the next Gate uninterrupted through its completion criterion. Pause only for a missing required input or a recorded blocker.
+
 ## Artifact Barriers
 
 - Advance only after the active gate's completion criterion in `SKILL.md` is satisfied, unless the user explicitly skips that confirmation.

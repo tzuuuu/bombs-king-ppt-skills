@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Initialize and validate a codex-ppt Project Workspace handoff."""
+"""Initialize and validate a pptgen Project Workspace handoff."""
 
 from __future__ import annotations
 

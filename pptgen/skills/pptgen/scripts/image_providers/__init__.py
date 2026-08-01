@@ -1,4 +1,4 @@
-"""Image API providers for the codex-ppt fallback CLI."""
+"""Image API providers for the pptgen fallback CLI."""
 
 from .base import ImageProvider
 from .factory import create_image_provider

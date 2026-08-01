@@ -38,6 +38,34 @@ class SkillInformationHierarchyTests(unittest.TestCase):
         self.assertNotIn("**State evidence:**", self.skill)
         self.assertNotIn("**Blocker behavior:**", self.skill)
 
+    def test_skill_identity_matches_folder_and_active_documentation(self) -> None:
+        self.assertEqual(SKILL_ROOT.name, "pptgen")
+        self.assertIn("\nname: pptgen\n", self.skill)
+
+        repository = SKILL_ROOT.parents[1]
+        active_docs = [
+            repository / "README.md",
+            repository / "README_en.md",
+            repository / "README_ko.md",
+            *(repository / "docs").glob("*.md"),
+            *(repository / "docs" / "en").glob("*.md"),
+            *(repository / "docs" / "ko").glob("*.md"),
+        ]
+        stale_identity = (
+            "skills/codex-ppt",
+            "--skill codex-ppt",
+            "codex-ppt skill",
+            "`codex-ppt`",
+        )
+        for path in active_docs:
+            with self.subTest(path=path):
+                content = path.read_text(encoding="utf-8")
+                for stale in stale_identity:
+                    self.assertNotIn(stale, content)
+
+        changelog = (repository / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertIn("Rename the installable skill from `codex-ppt` to `pptgen`", changelog)
+
     def test_chart_details_are_disclosed_only_for_the_chart_branch(self) -> None:
         chart_reference = SKILL_ROOT / "docs" / "data-charts.md"
         self.assertTrue(chart_reference.is_file())
@@ -112,6 +140,23 @@ class SkillInformationHierarchyTests(unittest.TestCase):
         self.assertIn("Source evidence.", workflow_gate(markdown, "Source gate"))
         with self.assertRaisesRegex(AssertionError, "Missing workflow gate: QA gate"):
             workflow_gate(markdown, "QA gate")
+
+    def test_gate_boundary_requires_one_confirmation_then_uninterrupted_next_gate(self) -> None:
+        self.assertIn("Gate boundary protocol", self.skill)
+        self.assertIn("one affirmative confirmation", self.skill)
+        self.assertIn("do not pause for another user response", self.skill)
+        self.assertIn("Gate boundary protocol", self.workflow_gates)
+        self.assertIn("uninterrupted", self.workflow_gates)
+
+    def test_gates_six_seven_eight_parallelize_page_scoped_subagents(self) -> None:
+        for gate_name in ("Package gate", "Production gate", "QA gate"):
+            with self.subTest(gate=gate_name):
+                gate = workflow_gate(self.skill, gate_name)
+                self.assertIn("subagent", gate.lower())
+                self.assertIn("parallel", gate.lower())
+                self.assertIn("page", gate.lower())
+        for marker in ("Gate 6", "Gate 7", "Gate 8"):
+            self.assertIn(marker, self.subagent_reference)
 
 
 if __name__ == "__main__":

@@ -34,7 +34,7 @@ def _dependency_hint(package: str, *, upgrade: bool = False) -> str:
     runtime_python = _runtime_python_path()
     requirements = _skill_root() / "requirements.txt"
     return (
-        "Install codex-ppt dependencies in the shared runtime first, for example "
+        "Install pptgen dependencies in the shared runtime first, for example "
         f"`python3 {_skill_root() / 'scripts' / 'codex_ppt_runtime.py'} bootstrap`, "
         f"or install {package} directly with `{runtime_python} -m pip install "
         f"{package_arg}`. Requirements file: `{requirements}`."

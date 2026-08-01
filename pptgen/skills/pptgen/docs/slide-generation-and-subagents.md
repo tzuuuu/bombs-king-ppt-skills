@@ -59,6 +59,20 @@ The goal is not to make subagents validate missing context. The goal is for the 
 
 When a slide job declares any `data_charts`, read `data-charts.md` before preparing or dispatching that job. Its Chart Source Packages and manifest entries must already be complete.
 
+## Parallel Gate Operations
+
+### Gate 6 — page-scoped package preparation
+
+When package, strict-asset, or context preparation is independent by page, fan out one subagent per page and run all independent page tasks in parallel. Each worker returns its page-scoped artifacts and evidence; the parent owns shared `deck_spec.json` assembly, manifest merge, and final validation. If no page-scoped work exists, keep the shared setup in the parent.
+
+### Gate 7 — page generation
+
+After prompt preparation, fan out one slide subagent per remaining page up to `dispatch_slots_available`. Record dispatch immediately, collect candidates in parallel, and record each selected result. This is the production contract described in `Parallel Slide Generation With Subagents` below.
+
+### Gate 8 — page QA and repair
+
+Fan out one QA subagent per final page. Each worker returns the complete checklist, evidence, and—when needed—a replacement candidate generated with the locked backend. Independent page repairs may run in parallel. The parent consolidates findings, selects replacements, records results, and owns the final handoff validation.
+
 Use a structured visual brief for each slide. Image generation works best when the prompt separates canvas, style, layout, text, visual elements, and constraints instead of relying only on a long style paragraph.
 
 Keep the deck visually coherent but vary slide layouts according to page semantics. Treat style references and `layout_blueprints` as candidate patterns, not fixed templates. Across a normal deck, deliberately mix suitable page types such as:

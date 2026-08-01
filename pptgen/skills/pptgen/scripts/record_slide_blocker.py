@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record a blocker that prevents a codex-ppt slide job from completing."""
+"""Record a blocker that prevents a pptgen slide job from completing."""
 
 from __future__ import annotations
 

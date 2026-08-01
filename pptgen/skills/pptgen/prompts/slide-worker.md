@@ -3,7 +3,7 @@
 Use this template when dispatching a slide subagent after the sample slide is approved and full-deck generation is authorized.
 
 ```text
-Generate slide <N> for this codex-ppt deck.
+Generate slide <N> for this pptgen deck.
 
 Deck dir: <absolute deck dir>
 Slide job file: <absolute deck dir>/prompts/slide_<NN>.json

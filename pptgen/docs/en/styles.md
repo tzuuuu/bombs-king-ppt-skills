@@ -7,7 +7,7 @@ Codex PPT draws its visual styles from two sources: the **built-in styles** ship
 The skill includes 12 built-in style references, so you can get started without knowing how to write prompts. When creating a presentation, simply name the style you want. For example:
 
 ```text
-Please use the codex-ppt skill to turn this material into a 10-slide presentation using the built-in "Hand-Drawn Technical Explanation" style.
+Please use the pptgen skill to turn this material into a 10-slide presentation using the built-in "Hand-Drawn Technical Explanation" style.
 ```
 
 | Clean Professional | Creative Magazine |
@@ -31,7 +31,7 @@ A style is a visual system—including color palette, typographic character, lay
 If the built-in styles do not meet your needs, provide a style reference you like: one screenshot, several screenshots, or a complete presentation or PDF. Ask the agent to analyze the colors, layout, typography, and visual elements before generating a new presentation in the same style:
 
 ```text
-Please use the codex-ppt skill to generate a presentation. Use the PDF I uploaded as the visual style reference. Review every page image in detail to understand its style, then generate the presentation in a similar style.
+Please use the pptgen skill to generate a presentation. Use the PDF I uploaded as the visual style reference. Review every page image in detail to understand its style, then generate the presentation in a similar style.
 ```
 
 Note: By default, only the style is reproduced, not the content. Unless you explicitly request it, text and data from the reference material will not be copied into the new presentation.

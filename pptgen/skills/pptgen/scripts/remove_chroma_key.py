@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remove a solid chroma-key background from a codex-ppt slide image.
+"""Remove a solid chroma-key background from a pptgen slide image.
 
 This helper supports the CLI/API transparent fallback workflow: generate an
 image on a flat key color, then convert that key color to alpha.
@@ -35,7 +35,7 @@ def _dependency_hint(package: str) -> str:
         python = home / ".venv" / "bin" / "python"
     skill_root = Path(__file__).resolve().parents[1]
     return (
-        "Install codex-ppt dependencies in the shared runtime first, for example "
+        "Install pptgen dependencies in the shared runtime first, for example "
         f"`python3 {skill_root / 'scripts' / 'codex_ppt_runtime.py'} bootstrap`, "
         f"or install {package} directly with `{python} -m pip install {package}`."
     )

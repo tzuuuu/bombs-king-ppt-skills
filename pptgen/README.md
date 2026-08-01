@@ -20,7 +20,7 @@
 > [!TIP]
 > 本 skill 负责从文章、报告、大纲或想法生成图片式 PPT，适合强视觉表达，但页面元素本身不可直接编辑。如果你需要进一步转换成可编辑 PPT，可以在生成完成后尝试使用 [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill) 进行转换。
 >
-> 关于 `codex-ppt` 和 `image-to-editable-ppt` 这两个技能的详细介绍，参见 [skill_duo_intro.pdf](assets/skill_duo_intro.pdf)。该 PPT 由 `codex-ppt` skill 生成，提示词为：“请分别阅读 Codex PPT和 Image to Editable PPT 这两个技能的内容，然后用 Codex PPT 帮我做一个PPT吧，20页，每个技能的介绍10页。”
+> 关于 `pptgen` 和 `image-to-editable-ppt` 这两个技能的详细介绍，参见 [skill_duo_intro.pdf](assets/skill_duo_intro.pdf)。该 PPT 由 `pptgen` skill 生成，提示词为：“请分别阅读 Codex PPT和 Image to Editable PPT 这两个技能的内容，然后用 Codex PPT 帮我做一个PPT吧，20页，每个技能的介绍10页。”
 >
 > 另外，关于这个 PPT Skill 设计和调优的实践经验，可以看这篇文章：[2000 个 GitHub Star 换来的经验：好的 AI Skill 是调出来的，不是写出来的](https://mp.weixin.qq.com/s/LaxWBX-nogHPpSxlk-Vs8Q)。
 
@@ -118,7 +118,7 @@
 【推荐】可以直接把下面这句话发给你的 Agent，让它帮你安装：
 
 ```text
-请帮我安装这个 codex-ppt skill，链接是：https://github.com/ningzimu/codex-ppt-skill
+请帮我安装这个 pptgen skill，链接是：https://github.com/ningzimu/codex-ppt-skill
 ```
 
 ### 手动安装到 Codex
@@ -127,20 +127,20 @@
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent codex \
   --global
 ```
 
 安装完成后，重启 Codex 让新 skill 生效。
 
-也可以从 GitHub Releases 下载 `codex-ppt-skill-v*.zip`，解压后把其中的 `codex-ppt` 文件夹放到 `~/.codex/skills/codex-ppt`，然后重启 Codex。
+也可以从 GitHub Releases 下载 `codex-ppt-skill-v*.zip`，解压后把其中的 `pptgen` 文件夹放到 `~/.codex/skills/pptgen`，然后重启 Codex。
 
 如果你是在本地开发这个仓库，也可以把 skill 目录链接到 Codex skills 目录，方便实时调试修改：
 
 ```bash
 mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+ln -s /path/to/codex-ppt-skill/skills/pptgen ~/.codex/skills/pptgen
 ```
 
 ### OpenClaw
@@ -148,12 +148,12 @@ ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
 可以通过 ClawHub 安装：
 
 ```bash
-openclaw skills install codex-ppt
+openclaw skills install pptgen
 ```
 
 ClawHub 页面：[clawhub.ai/ningzimu/codex-ppt](https://clawhub.ai/ningzimu/codex-ppt)
 
-如果使用 OpenClaw 的 skill allowlist，需要把 `codex-ppt` 加入允许列表。
+如果使用 OpenClaw 的 skill allowlist，需要把 `pptgen` 加入允许列表。
 
 ### Claude Code、Hermes Agent
 
@@ -162,18 +162,18 @@ ClawHub 页面：[clawhub.ai/ningzimu/codex-ppt](https://clawhub.ai/ningzimu/cod
 ```bash
 # Claude Code
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent claude-code \
   --global
 
 # Hermes Agent
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent hermes-agent \
   --global
 ```
 
-常见目标目录是：Claude Code 使用 `~/.claude/skills/codex-ppt`，Hermes Agent 使用 `~/.hermes/skills/codex-ppt`。
+常见目标目录是：Claude Code 使用 `~/.claude/skills/pptgen`，Hermes Agent 使用 `~/.hermes/skills/pptgen`。
 
 如果你是在本地开发这个仓库，也可以用软链接替代复制，方便实时调试修改。
 
@@ -182,7 +182,7 @@ npx -y skills@latest add ningzimu/codex-ppt-skill \
 重新执行一遍上面对应的安装命令即可覆盖为最新版本，也可以直接让 agent 帮你更新：
 
 ```text
-请帮我更新 codex-ppt skill 到最新版本，仓库是：https://github.com/ningzimu/codex-ppt-skill
+请帮我更新 pptgen skill 到最新版本，仓库是：https://github.com/ningzimu/codex-ppt-skill
 ```
 
 更新后重启 agent 生效。API key 配置（`~/.codex-ppt-skill/.env`）和个人风格库（`~/.codex-ppt-skill/references/`）都在 skill 安装目录之外，更新或重装不会丢失。
@@ -193,16 +193,16 @@ npx -y skills@latest add ningzimu/codex-ppt-skill \
 > 你可以先正常使用 Codex PPT 开始制作 PPT。一般不需要自己手动配置生图模型；当流程走到“选择生图后端”时，AI 会根据当前环境判断是否需要配置，并在需要时引导你提供相关信息。
 >
 > - 如果你使用的是 Codex 内置图片生成能力，通常不需要额外配置 API key。
-> - 如果你确定要使用第三方供应商或 OpenAI 兼容中转站，请让 AI 先阅读 [生图模型配置指南](skills/codex-ppt/docs/image-model-configuration.md)，再配置 API key、base URL 和模型名。
+> - 如果你确定要使用第三方供应商或 OpenAI 兼容中转站，请让 AI 先阅读 [生图模型配置指南](skills/pptgen/docs/image-model-configuration.md)，再配置 API key、base URL 和模型名。
 
 指定图片分辨率、提高质量或要求修改某一页，本身不会触发第三方 API 配置。如果你是通过 GPT 会员订阅使用 Codex，并且 Codex 内置图片生成工具可用，通常可以继续使用内置生图能力，不需要准备 API key。
 
 ## 使用方式
 
-在 Codex、Claude Code、OpenClaw 或 Hermes Agent 中明确指定使用 `codex-ppt` skill，例如：
+在 Codex、Claude Code、OpenClaw 或 Hermes Agent 中明确指定使用 `pptgen` skill，例如：
 
 ```text
-请使用 codex-ppt skill 把 /path/to/article.md 做成 10 页左右的 PPT。
+请使用 pptgen skill 把 /path/to/article.md 做成 10 页左右的 PPT。
 ```
 
 skill 会按以下流程执行：
@@ -233,7 +233,7 @@ skill 会按以下流程执行：
 
 ## 我的其他项目
 
-- [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill)：把幻灯片截图、PDF 页面或图片版 PPTX 重建为可编辑 PowerPoint，适合在 `codex-ppt` 生成整页图片后继续做可编辑化。
+- [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill)：把幻灯片截图、PDF 页面或图片版 PPTX 重建为可编辑 PowerPoint，适合在 `pptgen` 生成整页图片后继续做可编辑化。
 - [codex-gpt-image](https://github.com/ningzimu/codex-gpt-image)：通过 Codex OAuth / 会员登录调用 `gpt-image-2` 的生图 skill。
 - [handdrawn-tech-illustrations](https://github.com/ningzimu/handdrawn-tech-illustrations)：面向中文技术内容的手绘配图 skill，可以把技术文章、产品笔记、截图、大纲或粗略想法生成正文配图、概念解释图、微信公众号封面和小红书封面；风格强调亲和、轻卡通、中文可读和适中的信息密度。
 - [awesome-ai-ppt](https://github.com/ningzimu/awesome-ai-ppt)：精选的 AI PPT 相关开源项目，按 HTML-first、图片生成式、PPTX-native、转换与自动化基础设施等工作流分类，关注能帮助 agent 或开发者创建、编辑、转换、检查 PPT 的 GitHub 仓库。

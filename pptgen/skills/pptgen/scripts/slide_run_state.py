@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""State helpers for codex-ppt slide generation runs."""
+"""State helpers for pptgen slide generation runs."""
 
 from __future__ import annotations
 

@@ -2,20 +2,20 @@
 
 ## Who This Is For
 
-This page is for first-time Codex PPT users. All you need is an article, report, outline, paper, or set of course notes. Then ask your agent to use the `codex-ppt` skill to generate a presentation.
+This page is for first-time Codex PPT users. All you need is an article, report, outline, paper, or set of course notes. Then ask your agent to use the `pptgen` skill to generate a presentation.
 
 ## Shortest Way to Get Started
 
 First install the skill by following [Installation and Configuration](/en/installation.md). Then use the skill directly in Codex to create your presentation.
 
 ```text
-Please use the codex-ppt skill to turn /path/to/article.md into a Chinese presentation of about 10 slides.
+Please use the pptgen skill to turn /path/to/article.md into a Chinese presentation of about 10 slides.
 ```
 
 If you already know the intended style and use case, be more specific:
 
 ```text
-Please use the codex-ppt skill to turn this technical article into a 12-slide Chinese presentation. Use a clean, professional style suitable for an internal technical talk. Slide 5 must use the architecture diagram I provided, and slide 8 must preserve the experiment results figure.
+Please use the pptgen skill to turn this technical article into a 12-slide Chinese presentation. Use a clean, professional style suitable for an internal technical talk. Slide 5 must use the architecture diagram I provided, and slide 8 must preserve the experiment results figure.
 ```
 
 ## Recommendations for Your First Use

@@ -1,5 +1,5 @@
 ---
-name: codex-ppt
+name: pptgen
 description: Generate visually unified, image-based presentation workspaces from articles, reports, papers, notes, or outlines. Use when the requested deliverable is full-slide PNGs or a Project Workspace for downstream editable-PowerPoint reconstruction.
 metadata:
   openclaw:
@@ -33,6 +33,12 @@ Create complete 16:9 slide images and finish at a validated Project Workspace. O
 - **Backend lock:** the approved sample and every worker use the same backend, tool family, mode, and exposed model settings. Record these as `sample_generation_method`.
 - **Terminal artifact:** deliver the Project Workspace and ordered Slide Image Set without an intermediate `.pptx`.
 
+## Gate boundary protocol
+
+- Execute every action inside the active Gate until its completion criterion is satisfied; do not pause for another user response or progress check inside the Gate.
+- At a completed Gate, report its evidence and request one affirmative confirmation. For Gates 2–5, the outline, style, backend, or sample approval is this boundary confirmation.
+- After one affirmative confirmation, start the next Gate and execute it uninterrupted through its own completion criterion. Pause only when a required input or blocker prevents completion, and report the evidence needed to resolve it.
+
 ## Gated Workflow
 
 Run these gates in numbered order. Before creating artifacts or reporting progress, read `docs/workflow-gates-and-progress.md` for artifact barriers and the user-visible progress projection. A gate closes only on its stated evidence.
@@ -58,15 +64,15 @@ Run these gates in numbered order. Before creating artifacts or reporting progre
    **Complete when:** the user approves the page and the recorded method identifies the actual backend, tool, mode, prompt source, approved image, and available generation settings.
 
 6. **Package gate — build reproducible inputs.**
-   Prepare strict user assets per `docs/user-supplied-assets.md`. When the approved outline plans any Data Chart, read `docs/data-charts.md` and finish every Chart Source Package and the deck-level `chart_manifest.json` before prompt preparation.
+   Prepare strict user assets per `docs/user-supplied-assets.md`. When the approved outline plans any Data Chart, read `docs/data-charts.md` and finish every Chart Source Package and the deck-level `chart_manifest.json` before prompt preparation. When page-scoped package, asset, or context tasks are independent, use subagents to parallelize all of them by page; keep shared manifest assembly and validation in the parent.
    **Complete when:** `deck_spec.json` declares every planned page, every strict asset exists at its recorded path, and every delivered chart reproduces from its local snapshot.
 
 7. **Production gate — prepare, dispatch, and record every page.**
-   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Prepare self-contained slide jobs, dispatch the remaining pages, inspect returned candidates, and record every outcome through the disclosed state contract.
+   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Prepare self-contained slide jobs, then use one subagent per remaining page to parallelize all independent page generations up to the available slots. Inspect returned candidates and record every outcome through the disclosed state contract.
    **Complete when:** `slide_job_status.py` shows every generated page as `recorded`, approved samples as `accepted`, and no page as `pending`, `dispatched`, or `blocked`.
 
 8. **QA gate — inspect and repair the Slide Image Set.**
-   Follow `docs/project-handoff-and-reporting.md`. Inspect every page for readable text, outline fidelity, truncation, visual consistency, unwanted numbering, overlap, and visible required inputs. Regenerate severe defects; use the locked backend's edit capability for localized defects. For fallback editing commands, consult `docs/cli-api-fallback.md`.
+   Follow `docs/project-handoff-and-reporting.md`. Use one QA subagent per final page to parallelize the complete page checklist; independent repair candidates may also run in parallel through the locked backend. The parent consolidates QA, selects replacements, and records the final state. For fallback editing commands, consult `docs/cli-api-fallback.md`.
    **Complete when:** every expected `slide_XX.png` passes the full checklist and rejected variants remain outside `origin_image/`.
 
 9. **Handoff gate — validate the terminal artifact.**

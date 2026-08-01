@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare per-slide image generation jobs for codex-ppt.
+"""Prepare per-slide image generation jobs for pptgen.
 
 This script is deterministic. It does not call an image model. It turns a
 structured deck spec into one self-contained JSON job file per slide.

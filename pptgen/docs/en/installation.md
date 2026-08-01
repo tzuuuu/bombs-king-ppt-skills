@@ -5,38 +5,38 @@
 The recommended approach is to send the following sentence directly to Codex and let it install the skill for you:
 
 ```text
-Please install this codex-ppt skill for me: https://github.com/ningzimu/codex-ppt-skill
+Please install this pptgen skill for me: https://github.com/ningzimu/codex-ppt-skill
 ```
 
 ## Manual Installation for Codex
 
-Run the following command to install the `codex-ppt` skill in Codex's global skills directory:
+Run the following command to install the `pptgen` skill in Codex's global skills directory:
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent codex \
   --global
 ```
 
 Restart Codex after installation so the new skill takes effect.
 
-You can also download `codex-ppt-skill-v*.zip` from [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases), extract it, place the included `codex-ppt` folder at `~/.codex/skills/codex-ppt`, and restart Codex.
+You can also download `codex-ppt-skill-v*.zip` from [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases), extract it, place the included `pptgen` folder at `~/.codex/skills/pptgen`, and restart Codex.
 
 If you are developing this repository locally, you can symlink the skill directory into the Codex skills directory for real-time testing:
 
 ```bash
 mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+ln -s /path/to/codex-ppt-skill/skills/pptgen ~/.codex/skills/pptgen
 ```
 
 ## OpenClaw Installation
 
 ```bash
-openclaw skills install codex-ppt
+openclaw skills install pptgen
 ```
 
-If you use OpenClaw's skill allowlist, add `codex-ppt` to the allowlist.
+If you use OpenClaw's skill allowlist, add `pptgen` to the allowlist.
 
 ## Claude Code / Hermes Agent
 
@@ -44,7 +44,7 @@ Claude Code:
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent claude-code \
   --global
 ```
@@ -53,22 +53,22 @@ Hermes Agent:
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent hermes-agent \
   --global
 ```
 
-Common destination directories are `~/.claude/skills/codex-ppt` for Claude Code and `~/.hermes/skills/codex-ppt` for Hermes Agent. During local development, you can likewise use a symlink instead of copying the directory.
+Common destination directories are `~/.claude/skills/pptgen` for Claude Code and `~/.hermes/skills/pptgen` for Hermes Agent. During local development, you can likewise use a symlink instead of copying the directory.
 
 ## Updating the Skill
 
 The recommended approach is to send the following sentence directly to your agent and let it update the skill for you:
 
 ```text
-Please update the codex-ppt skill to the latest version. The repository is: https://github.com/ningzimu/codex-ppt-skill
+Please update the pptgen skill to the latest version. The repository is: https://github.com/ningzimu/codex-ppt-skill
 ```
 
-For a manual update, rerun the installation command above for the relevant agent. This overwrites the installed skill with the latest version. Alternatively, download the latest `codex-ppt-skill-v*.zip` from [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases), extract it, and replace the existing `codex-ppt` directory. Restart the agent after the update.
+For a manual update, rerun the installation command above for the relevant agent. This overwrites the installed skill with the latest version. Alternatively, download the latest `codex-ppt-skill-v*.zip` from [GitHub Releases](https://github.com/ningzimu/codex-ppt-skill/releases), extract it, and replace the existing `pptgen` directory. Restart the agent after the update.
 
 Updates are safe: runtime configuration such as API keys is stored in `~/.codex-ppt-skill/.env`, while your personal style library is stored in `~/.codex-ppt-skill/references/`. Both are outside the skill installation directory, so updating or reinstalling the skill will not remove them. See the [Releases page](https://github.com/ningzimu/codex-ppt-skill/releases) or the repository's `CHANGELOG.md` for the changes in each version.
 

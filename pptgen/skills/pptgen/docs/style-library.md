@@ -22,7 +22,7 @@ If the user only wants to use a style once, extract a temporary style descriptio
 
 Use the actual visible pages as the source of truth.
 
-- For a finished codex-ppt deck, inspect the final `origin_image/slide_XX.png` files or exported slide page images.
+- For a finished pptgen deck, inspect the final `origin_image/slide_XX.png` files or exported slide page images.
 - For a sample slide, inspect the approved sample image.
 - For user-provided image references, inspect the image itself.
 - For PDF/PPT/PPTX references, first render or export representative pages/slides into real page images, then inspect those images. Do not infer the style from file structure, text, XML, metadata, or object hierarchy alone.

@@ -11,6 +11,7 @@ Release notes are generated from this file. Keep changelog entries in English.
 ### Improvements
 
 - Add a user-visible source brief and asset inventory before outline planning.
+- Rename the installable skill from `codex-ppt` to `pptgen` to avoid collisions with existing Codex skills.
 
 ### Documentation
 

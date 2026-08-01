@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fallback CLI for codex-ppt image generation or editing with GPT Image models.
+"""Fallback CLI for pptgen image generation or editing with GPT Image models.
 
 Used when Codex's built-in image tool is unavailable, when the user explicitly
 opts into API mode, or when explicit transparent output requires the
@@ -142,7 +142,7 @@ def _dependency_hint(package: str, *, upgrade: bool = False) -> str:
     runtime_python = _runtime_python_path()
     requirements = _skill_root() / "requirements.txt"
     return (
-        "Install codex-ppt dependencies in the shared runtime first, for example "
+        "Install pptgen dependencies in the shared runtime first, for example "
         f"`python3 {_skill_root() / 'scripts' / 'codex_ppt_runtime.py'} bootstrap`, "
         f"or install {package} directly with `{runtime_python} -m pip install "
         f"{package_arg}`. Requirements file: `{requirements}`."
@@ -170,7 +170,7 @@ def _ensure_api_key(dry_run: bool) -> None:
         command = f'python3 {runtime_script} config --api-key "your-api-key" --model {model}'
         target_hint = "Detected official OpenAI API mode because OPENAI_BASE_URL is not set."
     _die(
-        "OPENAI_API_KEY is not set for codex-ppt CLI/API fallback.\n"
+        "OPENAI_API_KEY is not set for pptgen CLI/API fallback.\n"
         f"{target_hint}\n"
         "Use the built-in image tool if it is available. Otherwise configure the shared runtime once:\n"
         f"  {command}\n"

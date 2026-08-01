@@ -20,7 +20,7 @@ A Codex skill for generating complete slide images and reproducible Project Work
 > [!TIP]
 > This skill generates image-based PPT decks from articles, reports, outlines, or ideas. It is suitable for strong visual expression, but slide elements are not directly editable. If you need a more editable PPT, you can try converting the generated deck with [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill).
 >
-> For a detailed introduction to `codex-ppt` and `image-to-editable-ppt`, see [skill_duo_intro.pdf](assets/skill_duo_intro.pdf). This deck was generated with the `codex-ppt` skill using the prompt: "请分别阅读 Codex PPT和 Image to Editable PPT 这两个技能的内容，然后用 Codex PPT 帮我做一个PPT吧，20页，每个技能的介绍10页。"
+> For a detailed introduction to `pptgen` and `image-to-editable-ppt`, see [skill_duo_intro.pdf](assets/skill_duo_intro.pdf). This deck was generated with the `pptgen` skill using the prompt: "请分别阅读 Codex PPT和 Image to Editable PPT 这两个技能的内容，然后用 Codex PPT 帮我做一个PPT吧，20页，每个技能的介绍10页。"
 >
 > For more practical notes on designing and tuning this PPT skill, see the Chinese article [2000 个 GitHub Star 换来的经验：好的 AI Skill 是调出来的，不是写出来的](https://mp.weixin.qq.com/s/LaxWBX-nogHPpSxlk-Vs8Q).
 
@@ -118,7 +118,7 @@ Use `origin_image/` to review the final image used for each slide. Files are nam
 Recommended: send this sentence to your agent and let it install the skill for you:
 
 ```text
-Please install this codex-ppt skill for me: https://github.com/ningzimu/codex-ppt-skill
+Please install this pptgen skill for me: https://github.com/ningzimu/codex-ppt-skill
 ```
 
 ### Manual install for Codex
@@ -127,20 +127,20 @@ To install manually for Codex, use the `skills` CLI to add this skill to Codex's
 
 ```bash
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent codex \
   --global
 ```
 
 Restart Codex after installation so the new skill is picked up.
 
-You can also download `codex-ppt-skill-v*.zip` from GitHub Releases, unzip it, place the contained `codex-ppt` directory at `~/.codex/skills/codex-ppt`, and then restart Codex.
+You can also download `codex-ppt-skill-v*.zip` from GitHub Releases, unzip it, place the contained `pptgen` directory at `~/.codex/skills/pptgen`, and then restart Codex.
 
 If you are developing this repository locally, you can instead symlink the skill directory into the Codex skills directory so changes are reflected immediately:
 
 ```bash
 mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+ln -s /path/to/codex-ppt-skill/skills/pptgen ~/.codex/skills/pptgen
 ```
 
 ### OpenClaw
@@ -148,12 +148,12 @@ ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
 Install from ClawHub:
 
 ```bash
-openclaw skills install codex-ppt
+openclaw skills install pptgen
 ```
 
 ClawHub page: [clawhub.ai/ningzimu/codex-ppt](https://clawhub.ai/ningzimu/codex-ppt)
 
-If you use OpenClaw skill allowlists, add `codex-ppt` to the allowed skills.
+If you use OpenClaw skill allowlists, add `pptgen` to the allowed skills.
 
 ### Claude Code and Hermes Agent
 
@@ -162,18 +162,18 @@ These agents can read `SKILL.md` skills. You can also install with the `skills` 
 ```bash
 # Claude Code
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent claude-code \
   --global
 
 # Hermes Agent
 npx -y skills@latest add ningzimu/codex-ppt-skill \
-  --skill codex-ppt \
+  --skill pptgen \
   --agent hermes-agent \
   --global
 ```
 
-Common target directories are `~/.claude/skills/codex-ppt` for Claude Code and `~/.hermes/skills/codex-ppt` for Hermes Agent.
+Common target directories are `~/.claude/skills/pptgen` for Claude Code and `~/.hermes/skills/pptgen` for Hermes Agent.
 
 If you are developing this repository locally, you can use a symlink instead of copying so changes are reflected immediately.
 
@@ -182,7 +182,7 @@ If you are developing this repository locally, you can use a symlink instead of 
 Re-run the matching install command above to overwrite the installed skill with the latest version, or simply ask your agent to update it:
 
 ```text
-Please update the codex-ppt skill to the latest version. The repository is: https://github.com/ningzimu/codex-ppt-skill
+Please update the pptgen skill to the latest version. The repository is: https://github.com/ningzimu/codex-ppt-skill
 ```
 
 Restart the agent after updating. Your API key configuration (`~/.codex-ppt-skill/.env`) and personal style library (`~/.codex-ppt-skill/references/`) live outside the skill install directory, so updates and reinstalls never lose them.
@@ -193,16 +193,16 @@ Restart the agent after updating. Your API key configuration (`~/.codex-ppt-skil
 > You can start using Codex PPT normally to make a deck. In most cases, you do not need to configure the image model by hand; when the workflow asks you to choose an image backend, the AI will check the current environment and guide you through any required information.
 >
 > - If you use Codex's built-in image generation, you usually do not need an extra API key.
-> - If you have confirmed that a third-party provider or OpenAI-compatible proxy is needed, ask the AI to read the [image model configuration guide](skills/codex-ppt/docs/image-model-configuration.md) before configuring API key, base URL, and model name.
+> - If you have confirmed that a third-party provider or OpenAI-compatible proxy is needed, ask the AI to read the [image model configuration guide](skills/pptgen/docs/image-model-configuration.md) before configuring API key, base URL, and model name.
 
 Asking for a specific resolution, higher quality, or edits to one slide does not by itself trigger third-party API configuration. If you use Codex through a GPT subscription and Codex's built-in image generation tool is available, you can usually keep using the built-in image tool and do not need to prepare an API key.
 
 ## Usage
 
-Ask Codex, Claude Code, OpenClaw, or Hermes Agent and explicitly specify the `codex-ppt` skill, for example:
+Ask Codex, Claude Code, OpenClaw, or Hermes Agent and explicitly specify the `pptgen` skill, for example:
 
 ```text
-Use the codex-ppt skill to turn /path/to/article.md into a roughly 10-slide PPT.
+Use the pptgen skill to turn /path/to/article.md into a roughly 10-slide PPT.
 ```
 
 The skill follows this workflow:
@@ -233,7 +233,7 @@ The skill follows this workflow:
 
 ## More Projects
 
-- [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill): Rebuild slide screenshots, PDF pages, or image-based PPTX files into editable PowerPoint decks, useful after `codex-ppt` generates image-based slides.
+- [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill): Rebuild slide screenshots, PDF pages, or image-based PPTX files into editable PowerPoint decks, useful after `pptgen` generates image-based slides.
 - [codex-gpt-image](https://github.com/ningzimu/codex-gpt-image): A `gpt-image-2` image generation skill powered by Codex OAuth / member login.
 - [handdrawn-tech-illustrations](https://github.com/ningzimu/handdrawn-tech-illustrations): A hand-drawn illustration skill for Chinese technical content. It turns technical articles, product notes, screenshots, outlines, or rough ideas into article illustrations, concept explainer graphics, WeChat cover images, and Rednote covers, with a friendly, light-cartoon, Chinese-readable style and moderate information density.
 - [awesome-ai-ppt](https://github.com/ningzimu/awesome-ai-ppt): A curated list of open-source AI PPT projects, organized by workflows such as HTML-first, image-first, PPTX-native, conversion, and automation infrastructure, focused on GitHub projects that help agents or developers create, edit, convert, or inspect PPT decks.
