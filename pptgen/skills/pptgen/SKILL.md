@@ -29,7 +29,8 @@ Create complete 16:9 slide images and finish at a validated Project Workspace. O
 
 ## Invariants
 
-- **Producer boundary:** the confirmed image backend produces every final `origin_image/slide_XX.png`. Local drawing, Pillow, SVG, HTML/CSS/canvas, PowerPoint layout libraries, and manual overlays are invalid final-slide producers.
+- **Producer boundary:** the confirmed image backend produces every slide candidate under the deck's `generated_images/`; the parent copies the selected candidate into the final `origin_image/slide_XX.png`. Local drawing, Pillow, SVG, HTML/CSS/canvas, PowerPoint layout libraries, and manual overlays are invalid final-slide producers.
+- **Image directory boundary:** `generated_images/` is the only location for intermediate/subagent candidates, while `origin_image/` contains only the final ordered Slide Image Set.
 - **Backend lock:** the approved sample and every worker use the same backend, tool family, mode, and exposed model settings. Record these as `sample_generation_method`.
 - **Terminal artifact:** deliver the Project Workspace and ordered Slide Image Set without an intermediate `.pptx`.
 
@@ -73,7 +74,7 @@ Run these gates in numbered order. Before creating artifacts or reporting progre
 
 8. **QA gate — inspect and repair the Slide Image Set.**
    Follow `docs/project-handoff-and-reporting.md`. Use one QA subagent per final page and fill every available slot; independent repair candidates may also run in parallel through the locked backend. The parent consolidates QA, selects replacements, and records the final state. For fallback editing commands, consult `docs/cli-api-fallback.md`.
-   **Complete when:** every expected `slide_XX.png` passes the full checklist and rejected variants remain outside `origin_image/`.
+   **Complete when:** every expected `slide_XX.png` passes the full checklist, selected candidates came from `generated_images/`, and rejected variants remain in `generated_images/` rather than `origin_image/`.
 
 9. **Handoff gate — validate the terminal artifact.**
    Finalize `outline.md` and, when requested, `speech.md` with `Slide N` headings. Run `scripts/project_handoff.py validate {base_dir}/{deck_name}` and use the final-report checklist in `docs/project-handoff-and-reporting.md`.

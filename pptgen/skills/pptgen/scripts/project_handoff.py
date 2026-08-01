@@ -22,9 +22,16 @@ def _print_json(payload: dict) -> None:
 
 def _init_workspace(target: str) -> int:
     workspace = Path(target).expanduser().resolve()
-    for name in ("origin_image", "prompts", "chart_assets"):
+    for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
         (workspace / name).mkdir(parents=True, exist_ok=True)
-    _print_json({"status": "initialized", "project_workspace": str(workspace)})
+    _print_json(
+        {
+            "status": "initialized",
+            "project_workspace": str(workspace),
+            "slide_image_set": str((workspace / "origin_image").resolve()),
+            "generated_images": str((workspace / "generated_images").resolve()),
+        }
+    )
     return 0
 
 
@@ -45,7 +52,7 @@ def _validate_workspace(target: str) -> int:
     if not workspace.is_dir():
         raise HandoffError(f"Project Workspace does not exist: {workspace}")
 
-    for directory in ("origin_image", "prompts", "chart_assets"):
+    for directory in ("origin_image", "generated_images", "prompts", "chart_assets"):
         if not (workspace / directory).is_dir():
             raise HandoffError(f"Missing required workspace directory: {directory}")
     for artifact in ("outline.md", "deck_spec.json"):
@@ -161,6 +168,7 @@ def _validate_workspace(target: str) -> int:
             "status": "ready_for_handoff",
             "project_workspace": str(workspace),
             "slide_image_set": str((workspace / "origin_image").resolve()),
+            "generated_images": str((workspace / "generated_images").resolve()),
             "slide_count": len(slides),
             "selected_backend": jobs.get("selected_backend"),
             "recorded_result_status": jobs.get("run_status"),

@@ -88,6 +88,7 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 │   ├── slide_01.png        # 1번 슬라이드 이미지
 │   ├── slide_02.png        # 2번 슬라이드 이미지
 │   └── ...                 # 이후 슬라이드 이미지, 슬라이드 순서대로 명명
+├── generated_images/       # 모든 하위 agent가 생성한 중간 후보 이미지와 탈락 버전
 ├── chart_assets/           # Data Chart별 Python, 데이터 스냅샷, PNG
 ├── chart_manifest.json     # 슬라이드-차트 전달 manifest
 ├── prompts/                # 자체 완결적인 슬라이드 작업
@@ -98,7 +99,7 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 └── speech.md               # 후속 재구성을 위해 보존되는 발표 대본
 ```
 
-`origin_image/`로 각 슬라이드에 사용된 최종 이미지를 검토할 수 있습니다. 파일은 `slide_01.png`, `slide_02.png` 식으로 순서대로 명명되어, 덱을 시각적으로 미리 보거나 특정 슬라이드 하나만 수정 요청하기 쉽습니다.
+`origin_image/`로 각 슬라이드에 사용된 최종 이미지를 검토할 수 있습니다. 하위 agent가 생성한 후보 이미지는 `generated_images/`에 모으며, parent agent가 선택한 후보를 `origin_image/`로 복사합니다. 파일은 `slide_01.png`, `slide_02.png` 식으로 순서대로 명명되어, 덱을 시각적으로 미리 보거나 특정 슬라이드 하나만 수정 요청하기 쉽습니다.
 
 `speech.md`는 후속 편집 가능 PowerPoint 재구성을 위해 보존되는 발표 대본입니다. PPTGen은 중간 PPTX를 조립하지 않습니다.
 

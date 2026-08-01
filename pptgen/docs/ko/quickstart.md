@@ -30,6 +30,7 @@ pptgen skill을 사용해서 이 기술 문서를 12페이지 분량의 한국�
 최종적으로 보통 다음 파일을 받게 됩니다.
 
 - `outline.md`: PPT 개요
+- `generated_images/`: 하위 agent가 생성한 모든 중간 후보 이미지와 탈락 버전
 - `origin_image/slide_XX.png`: 각 슬라이드의 최종 이미지
 - `speech.md`: 각 슬라이드의 발표 메모
 - `origin_image/`: 순서대로 이름 지정된 최종 Slide Image Set

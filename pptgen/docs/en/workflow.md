@@ -52,7 +52,7 @@ Generate one sample slide first and check:
 - Whether the colors and layout are stable
 - Whether the design can scale to the full presentation
 
-Generate the full deck only after the sample slide is approved.
+Generate the full deck only after the sample slide is approved. Every sub-agent candidate is saved under the workspace's `generated_images/` directory; the parent agent copies the selected candidate into `origin_image/slide_XX.png`.
 
 ## Stage 6: Batch Generation
 

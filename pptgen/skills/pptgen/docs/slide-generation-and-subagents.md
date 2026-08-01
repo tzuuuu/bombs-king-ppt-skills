@@ -31,6 +31,10 @@ The helper writes:
 
 ```text
 {base_dir}/{deck_name}/
+├── generated_images/
+│   ├── slide_01-candidate.png
+│   ├── slide_02-candidate.png
+│   └── ...
 ├── prompts/
 │   ├── slide_01.json
 │   ├── slide_02.json
@@ -155,7 +159,7 @@ The default page-worker capacity is 30. Treat this as the requested maximum for 
 
 Parent agent responsibilities:
 
-- Own `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, `prompts/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
+- Own `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, `prompts/`, `generated_images/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
 - Run `prepare_slide_prompts.py` or otherwise write full per-slide JSON jobs and `slide_jobs.json` before delegation.
 - Run `slide_job_status.py` to see dispatch slots and pending slide ids before each batch.
 - Ensure the approved sample slide is included in every non-sample job as a style-only input image when available.
@@ -178,6 +182,7 @@ Subagent responsibilities:
 - Treat the approved sample slide as style reference only.
 - Treat any required source images as strict input assets and preserve their content according to the prompt.
 - Inspect the generated candidate for text quality, style consistency, required-image inclusion, and layout issues before returning it.
+- Save or copy every original candidate into the deck's `generated_images/` directory, then return the selected deck-local absolute path. Do not leave candidates only in a tool cache or `$CODEX_HOME` directory.
 - Return only the selected original generated image path, the backend used, and a one-sentence QA note.
 
 Subagents must not edit `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, other slide job files, `origin_image/`, or `speech.md`. The parent agent alone records selected outputs and validates the final handoff.
@@ -230,7 +235,7 @@ Save images as:
 ...
 ```
 
-After each image is generated, the parent agent should record it with `record_slide_result.py`, which copies it into `{base_dir}/{deck_name}/origin_image/` and rejects backend provenance that does not match the selected backend or sample generation method. Do not leave final slide images only in a temporary or default generated-images directory, and do not manually mark slide state complete.
+After each image is generated, the parent agent should record it with `record_slide_result.py`, which accepts only a selected source under `{base_dir}/{deck_name}/generated_images/`, copies it into `{base_dir}/{deck_name}/origin_image/`, and rejects backend provenance that does not match the selected backend or sample generation method. Do not leave the selected candidate only in a temporary tool-cache directory, and do not manually mark slide state complete.
 
 In CLI/API fallback mode, read `cli-api-fallback.md` for text-only generation commands, image-input limitations, edit commands, transparency rules, and runtime troubleshooting.
 
@@ -239,7 +244,7 @@ Final slide image naming rules:
 - Rename final slide images strictly by slide order: `slide_01.png`, `slide_02.png`, `slide_03.png`, ...
 - Use zero-padded two-digit numbers for normal decks.
 - The approved sample slide should already have the correct `slide_XX.png` filename and should be reused directly.
-- Keep rejected variants, drafts, or reference images out of `origin_image/`. If you need to preserve them, place them in the project root or a separate `drafts/` directory.
+- Keep rejected variants and drafts in `generated_images/`, never in `origin_image/`. Keep unrelated reference images in their role-specific asset directories.
 - Before handoff, verify every expected `slide_XX.png` exists in `origin_image/`, there are no missing or extra final slide images, `slide_job_status.py` shows all non-sample slide jobs as `recorded`, and `project_handoff.py validate` succeeds.
 
 For Chinese decks, explicitly ask the image backend to render Chinese text accurately and avoid garbled characters.

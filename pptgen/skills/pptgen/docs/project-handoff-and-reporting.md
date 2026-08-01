@@ -11,6 +11,7 @@ Use this output structure:
 ├── origin_image/
 │   ├── slide_01.png
 │   └── ...
+├── generated_images/      # All intermediate and candidate images, including rejected variants
 ├── chart_assets/
 │   └── slide_XX/
 │       └── chart_YY/
@@ -34,7 +35,7 @@ If the user did not specify a destination, use the current working directory or 
 python3 {skill_root}/scripts/project_handoff.py init {base_dir}/{deck_name}
 ```
 
-The initializer never creates a PPTX. `origin_image/` is the Slide Image Set and contains only final `slide_XX.png` images. Keep drafts and rejected candidates elsewhere.
+The initializer never creates a PPTX. `origin_image/` is the Slide Image Set and contains only final `slide_XX.png` images. `generated_images/` is the canonical location for every subagent-generated candidate, including drafts and rejected variants. The parent agent copies the selected candidate from there into `origin_image/`.
 
 ## Quality Check And Repair
 

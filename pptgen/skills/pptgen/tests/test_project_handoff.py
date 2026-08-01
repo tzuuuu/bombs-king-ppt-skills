@@ -44,13 +44,14 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(summary["status"], "initialized")
             self.assertEqual(Path(summary["project_workspace"]), workspace.resolve())
             self.assertTrue((workspace / "origin_image").is_dir())
+            self.assertTrue((workspace / "generated_images").is_dir())
             self.assertTrue((workspace / "prompts").is_dir())
             self.assertTrue((workspace / "chart_assets").is_dir())
             self.assertEqual(list(workspace.glob("*.pptx")), [])
 
     def create_slide_only_workspace(self, root: Path) -> Path:
         workspace = root / "quarterly-report"
-        for name in ("origin_image", "prompts", "chart_assets"):
+        for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
             (workspace / name).mkdir(parents=True, exist_ok=True)
         (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
         (workspace / "deck_spec.json").write_text(
@@ -95,6 +96,7 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(summary["status"], "ready_for_handoff")
             self.assertEqual(summary["slide_count"], 2)
             self.assertEqual(summary["slide_image_set"], str((workspace / "origin_image").resolve()))
+            self.assertEqual(summary["generated_images"], str((workspace / "generated_images").resolve()))
             self.assertEqual(summary["selected_backend"], "built-in image tool")
             self.assertEqual(summary["recorded_result_status"], "slides_recorded")
             self.assertTrue(summary["outline_present"])
@@ -264,7 +266,7 @@ class ProjectHandoffCliTests(unittest.TestCase):
     def test_chart_and_chartless_slides_prepare_record_and_validate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "end-to-end"
-            for name in ("origin_image", "prompts", "chart_assets"):
+            for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
                 (workspace / name).mkdir(parents=True, exist_ok=True)
             (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
             (workspace / "deck_spec.json").write_text(
@@ -302,7 +304,31 @@ class ProjectHandoffCliTests(unittest.TestCase):
                     text=True,
                 )
                 self.assertEqual(dispatch.returncode, 0, dispatch.stderr)
-                source = workspace / f"worker-slide-{number}.png"
+                outside_source = workspace / f"worker-slide-{number}-outside.png"
+                Image.new("RGB", (4, 3), (10, 20, 30)).save(outside_source)
+                rejected = subprocess.run(
+                    [
+                        sys.executable,
+                        str(RECORD_SCRIPT),
+                        str(workspace),
+                        "--slide",
+                        str(number),
+                        "--agent-id",
+                        f"agent-{number}",
+                        "--backend-used",
+                        "built-in image tool",
+                        "--selected-source",
+                        str(outside_source),
+                        "--qa-note",
+                        "visual QA passed",
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn("generated_images/ directory", rejected.stderr)
+                source = workspace / "generated_images" / f"worker-slide-{number}.png"
                 Image.new("RGB", (4, 3), (number * 20, 30, 40)).save(source)
                 record = subprocess.run(
                     [

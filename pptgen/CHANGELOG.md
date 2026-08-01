@@ -12,6 +12,7 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 - Add a user-visible source brief and asset inventory before outline planning.
 - Raise the default page-worker capacity to 30 and require full-slot dispatch with immediate refill for pending slide jobs.
+- Standardize all subagent-generated candidates under each deck's `generated_images/` directory while keeping final slides in `origin_image/`.
 - Rename the installable skill from `codex-ppt` to `pptgen` to avoid collisions with existing Codex skills.
 
 ### Documentation

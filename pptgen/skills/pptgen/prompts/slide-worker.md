@@ -7,6 +7,7 @@ Generate slide <N> for this pptgen deck.
 
 Deck dir: <absolute deck dir>
 Slide job file: <absolute deck dir>/prompts/slide_<NN>.json
+Candidate output directory owned by parent: <absolute deck dir>/generated_images/
 Output target owned by parent: <absolute deck dir>/origin_image/slide_<NN>.png
 Selected image backend: <built-in image tool OR CLI/API fallback>
 Sample generation method copied from the approved sample:
@@ -26,6 +27,8 @@ Read the JSON job file, then follow its `prompt` field exactly. Use the selected
 You must produce the final slide candidate by calling the selected image generation backend:
 - Built-in mode: use the built-in image generation/editing tool.
 - CLI/API fallback mode: use `scripts/image_gen.py` with the saved job prompt and required image inputs.
+- Save or copy every original candidate image into `<absolute deck dir>/generated_images/` before returning. The parent agent only accepts a selected source from this directory.
+- The parent agent copies the selected candidate into `origin_image/slide_<NN>.png`; do not write the final image there yourself.
 
 Forbidden for final slide image creation:
 - local drawing or rendering scripts
@@ -42,7 +45,7 @@ For every input marked as a Data Chart:
 
 If you cannot use the selected image backend, stop and return `blocker=<reason>` instead of creating a lower-quality replacement.
 If you cannot follow the recorded sample generation method, stop and return `blocker=<reason>` instead of switching tools.
-Do not edit slide job files, Chart Source Packages, chart_manifest.json, origin_image, or speech.md. The parent validates the Project Workspace handoff.
+Do not edit slide job files, Chart Source Packages, chart_manifest.json, origin_image, or speech.md. The parent validates the Project Workspace handoff and owns the copy from `generated_images/` into `origin_image/`.
 
 Before returning, visually check:
 - Chinese text is readable and not garbled
@@ -52,6 +55,6 @@ Before returning, visually check:
 
 Return only:
 backend_used=<built-in image tool OR scripts/image_gen.py>
-selected_source=/absolute/path/to/$CODEX_HOME/generated_images/.../ig_*.png
+selected_source=<absolute path to the selected candidate inside the deck's generated_images/ directory>
 qa_note=<one sentence>
 ```

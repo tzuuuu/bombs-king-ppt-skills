@@ -16,7 +16,7 @@ This is an internal setup step for the skill. Do not ask the user to run it unle
 
 The fallback CLI loads `~/.codex-ppt-skill/.env` automatically for `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `CODEX_PPT_IMAGE_MODEL`. Do not manually parse `.env`. For API key, base URL, model, and config troubleshooting, read `image-model-configuration.md` only after the fallback CLI reports missing or invalid configuration, when the user explicitly wants to change those settings, or when a real API call reports authentication, permission, base URL, or model availability failure.
 
-## Generate One Slide
+## Generate One Slide Candidate
 
 Basic generation command:
 
@@ -26,8 +26,10 @@ Basic generation command:
   --prompt-file {prompt_file} \
   --size 2560x1440 \
   --quality medium \
-  --out {base_dir}/{deck_name}/origin_image/slide_01.png
+  --out {base_dir}/{deck_name}/generated_images/slide_01-candidate.png
 ```
+
+This command creates an intermediate candidate. The parent agent must select a candidate from `generated_images/` and run `record_slide_result.py`; that recorder copies the selected image to `origin_image/slide_01.png`.
 
 The fallback CLI accepts model names containing `gpt-image-`, such as `gpt-image-2` or `openai/gpt-image-2`.
 
@@ -39,7 +41,7 @@ python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("{base_dir}/{dec
   --prompt-file - \
   --size 2560x1440 \
   --quality medium \
-  --out {base_dir}/{deck_name}/origin_image/slide_01.png
+  --out {base_dir}/{deck_name}/generated_images/slide_01-candidate.png
 ```
 
 Before using this text-only `generate` path, inspect the assigned `prompts/slide_XX.json`. If `input_images` is non-empty or `requires_context_images` is true, this command is not sufficient because it does not attach those images. Use a selected backend/path that can pass the required images, such as the built-in image tool with the images visible in context or a CLI/API edit/image-input path that supplies every required source image. If no such path is available, stop and ask the user whether to switch backend. Do not generate a text-only replacement for a strict input asset.
@@ -61,10 +63,10 @@ If a slide is mostly correct but has a localized issue, use the selected backend
 ~/.codex-ppt-skill/.venv/bin/python {skill_root}/scripts/image_gen.py edit \
   --image {slide_path} \
   --prompt {edit_prompt} \
-  --out {new_slide_path}
+  --out {base_dir}/{deck_name}/generated_images/slide_01-revision.png
 ```
 
-Replace the final slide only after validating the edited output.
+The edit output is another candidate under `generated_images/`. Replace the final slide only after validating it and recording it through the parent-owned result script.
 
 ## Transparent Backgrounds
 

@@ -431,6 +431,7 @@ def main() -> int:
     prompts_dir = out_dir / "prompts"
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "origin_image").mkdir(parents=True, exist_ok=True)
+    (out_dir / "generated_images").mkdir(parents=True, exist_ok=True)
     (out_dir / "chart_assets").mkdir(parents=True, exist_ok=True)
 
     planned_identities: set[tuple[str, str]] = set()
@@ -516,6 +517,7 @@ def main() -> int:
             "title": slide.get("title", f"Slide {number}"),
             "prompt": prompt,
             "out": f"slide_{number:02d}.png",
+            "candidate_output_dir": "generated_images",
             "input_images": images,
             "data_charts": chart_metadata,
             "requires_context_images": bool(images),
@@ -568,6 +570,7 @@ def main() -> int:
         "deck_name": spec.get("deck_name"),
         "selected_backend": selected_backend,
         "sample_generation_method": sample_generation_method,
+        "candidate_output_dir": "generated_images",
         "max_concurrent_slides": max_concurrent_slides,
         "slides": slide_job_entries,
         "updated_at": now_iso(),

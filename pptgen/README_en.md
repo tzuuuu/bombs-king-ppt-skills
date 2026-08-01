@@ -88,6 +88,7 @@ Each run is generated into an independent Project Workspace:
 │   ├── slide_01.png        # Slide 1 image
 │   ├── slide_02.png        # Slide 2 image
 │   └── ...                 # Additional slide images, named in slide order
+├── generated_images/       # All subagent-generated intermediate candidates, including rejected variants
 ├── chart_assets/           # Reproducible Python, data snapshot, and PNG per Data Chart
 ├── chart_manifest.json     # Slide-to-chart handoff manifest
 ├── prompts/                # Self-contained slide jobs
@@ -98,7 +99,7 @@ Each run is generated into an independent Project Workspace:
 └── speech.md               # Speaker script retained for downstream reconstruction
 ```
 
-Use `origin_image/` to review the final image used for each slide. Files are named in order as `slide_01.png`, `slide_02.png`, and so on, which makes it easy to preview the deck visually or ask for one specific slide to be revised.
+Use `origin_image/` to review the final image used for each slide. Subagent-generated candidates are kept in `generated_images/`, and the parent agent copies the selected candidate into `origin_image/`. Files are named in order as `slide_01.png`, `slide_02.png`, and so on, which makes it easy to preview the deck visually or ask for one specific slide to be revised.
 
 `speech.md` is the companion talk track retained for the downstream editable-PowerPoint stage. PPTGen itself does not assemble an intermediate PPTX.
 

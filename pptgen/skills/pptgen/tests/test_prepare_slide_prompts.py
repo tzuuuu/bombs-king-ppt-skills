@@ -49,6 +49,12 @@ class PrepareSlidePromptsCliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
             self.assertEqual(jobs["max_concurrent_slides"], 30)
+            self.assertEqual(jobs["candidate_output_dir"], "generated_images")
+            self.assertTrue((workspace / "generated_images").is_dir())
+            prompt_job = json.loads(
+                (workspace / "prompts" / "slide_01.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(prompt_job["candidate_output_dir"], "generated_images")
 
     def test_planned_data_chart_becomes_required_slide_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

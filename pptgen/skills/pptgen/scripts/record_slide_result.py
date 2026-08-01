@@ -147,12 +147,20 @@ def main() -> int:
         expected_backend_labels = _expected_backend_labels(jobs, slide, prompt_job)
         matched_expected_backend = _matched_expected_backend(backend_used, expected_backend_labels)
         source = ensure_file(Path(args.selected_source).expanduser().resolve(), "selected source image")
+        candidate_dir = (deck_dir / "generated_images").resolve()
+        try:
+            source.relative_to(candidate_dir)
+        except ValueError as exc:
+            raise SystemExit(
+                "Selected source image must be inside the deck generated_images/ directory: "
+                f"{source}"
+            ) from exc
         out_ref = slide.get("out") or f"origin_image/{slide['slide_id']}.png"
         target = resolve_deck_path(deck_dir, out_ref)
         try:
-            target.relative_to(deck_dir)
+            target.relative_to((deck_dir / "origin_image").resolve())
         except ValueError as exc:
-            raise SystemExit(f"Final slide image must live inside deck dir: {target}") from exc
+            raise SystemExit(f"Final slide image must live in the deck origin_image/ directory: {target}") from exc
         target.parent.mkdir(parents=True, exist_ok=True)
         if source != target:
             shutil.copy2(source, target)

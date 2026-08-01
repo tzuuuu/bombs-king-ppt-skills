@@ -88,6 +88,7 @@
 │   ├── slide_01.png        # 第 1 页幻灯片图片
 │   ├── slide_02.png        # 第 2 页幻灯片图片
 │   └── ...                 # 后续页面图片，按页码顺序命名
+├── generated_images/       # 所有子智能体生成的中间候选图，包括淘汰版本
 ├── chart_assets/           # 每张数据图表的 Python、数据快照与 PNG
 ├── chart_manifest.json     # 幻灯片与图表交接清单
 ├── prompts/                # 自包含幻灯片任务
@@ -98,7 +99,7 @@
 └── speech.md               # 供后续重建使用的演讲稿
 ```
 
-你可以在 `origin_image/` 里查看每一页最终采用的幻灯片图片，文件会按 `slide_01.png`、`slide_02.png` 这样的顺序排列。想预览整套 PPT 的视觉效果，或只挑某一页继续修改时，直接看这里最方便。
+你可以在 `origin_image/` 里查看每一页最终采用的幻灯片图片，文件会按 `slide_01.png`、`slide_02.png` 这样的顺序排列。子智能体生成的候选图统一放在 `generated_images/`，由 parent agent 将选中的候选图复制到 `origin_image/`。想预览整套 PPT 的视觉效果，或只挑某一页继续修改时，直接看这里最方便。
 
 `speech.md` 是为后续可编辑 PowerPoint 重建保留的配套演讲稿。PPTGen 本身不组装中间 PPTX。
 
