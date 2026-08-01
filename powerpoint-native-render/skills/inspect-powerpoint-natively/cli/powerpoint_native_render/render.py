@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 import hashlib
 import importlib
 import json
+import math
 from pathlib import Path
 import platform
 import shutil
@@ -21,17 +22,12 @@ MACOS_APPLESCRIPT = r'''
 on run argv
     set targetFullName to item 1 of argv
     set destinationPathText to item 2 of argv
-    set destinationFile to POSIX file destinationPathText
     set targetDeck to missing value
 
     tell application "Microsoft PowerPoint"
         try
             set targetDeck to first presentation whose full name is targetFullName
-            set output type of print options of targetDeck to print slides
-            set frame slides of print options of targetDeck to false
-            set print fonts as graphics of print options of targetDeck to true
-            set print color type of print options of targetDeck to print color
-            save targetDeck in destinationFile as save as PDF
+            save targetDeck in destinationPathText as save as PDF
             set appVersion to Version
             close targetDeck saving no
             set targetDeck to missing value
@@ -59,12 +55,14 @@ return joinedNames
 
 MACOS_CLEANUP_APPLESCRIPT = r'''
 on run argv
-    set targetFullName to item 1 of argv
-
     tell application "Microsoft PowerPoint"
-        try
-            close (first presentation whose full name is targetFullName) saving no
-        end try
+        repeat with targetFullName in argv
+            if exists (first presentation whose full name is targetFullName) then
+                close (first presentation whose full name is targetFullName) saving no
+                return "closed"
+            end if
+        end repeat
+        error "PowerPoint did not expose any exact snapshot cleanup candidate" number 1708
     end tell
 end run
 '''
@@ -94,6 +92,18 @@ class RenderFailure(RuntimeError):
             "message": self.message,
             "repair_action": self.repair_action,
         }
+
+
+def _remaining_seconds(deadline: float) -> int:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise RenderFailure(
+            "POWERPOINT_EXPORT_TIMEOUT",
+            "The native render attempt exhausted its timeout budget.",
+            "Close blocking dialogs, confirm the source is closed, and retry.",
+            transient=True,
+        )
+    return max(1, math.ceil(remaining))
 
 
 @dataclass(frozen=True)
@@ -250,13 +260,13 @@ class MacPowerPointExporter(PowerPointExporter):
         except OSError:
             pass
 
-    def _cleanup(self, target_full_name: str, *, timeout: int) -> None:
+    def _cleanup(self, target_full_names: List[str], *, timeout: int) -> None:
         if self.runner is None:
             return
         try:
             cleanup = self.runner.run(
                 MACOS_CLEANUP_APPLESCRIPT,
-                [target_full_name],
+                target_full_names,
                 timeout=min(timeout, 15),
             )
         except (OSError, subprocess.SubprocessError) as error:
@@ -272,6 +282,15 @@ class MacPowerPointExporter(PowerPointExporter):
                 f"Could not close the exact snapshot after export failed: {detail}",
                 "Close only the read-only snapshot shown in PowerPoint, then retry.",
             )
+
+    @staticmethod
+    def _source_path_candidates(source: Path) -> List[str]:
+        source_text = str(source)
+        candidates = [source_text]
+        private_tmp_prefix = "/private/tmp/"
+        if source_text.startswith(private_tmp_prefix):
+            candidates.append(f"/tmp/{source_text[len(private_tmp_prefix):]}")
+        return candidates
 
     def _discover_target(self, source: Path, *, timeout: int) -> str:
         if self.runner is None:
@@ -326,6 +345,7 @@ class MacPowerPointExporter(PowerPointExporter):
                 "The macOS osascript command is unavailable.",
                 "Restore osascript and run doctor again.",
             )
+        deadline = time.monotonic() + timeout
         staging_directory = self.staging_root / uuid.uuid4().hex
         staging_pdf = staging_directory / "powerpoint-export.pdf"
         try:
@@ -340,10 +360,17 @@ class MacPowerPointExporter(PowerPointExporter):
             self.launcher.launch(
                 source,
                 settle_seconds=settle_seconds,
-                timeout=timeout,
+                timeout=_remaining_seconds(deadline),
             )
-            target_full_name = self._discover_target(source, timeout=timeout)
-        except Exception:
+            target_full_name = self._discover_target(
+                source,
+                timeout=_remaining_seconds(deadline),
+            )
+        except RenderFailure:
+            self._cleanup(
+                self._source_path_candidates(source),
+                timeout=min(timeout, 15),
+            )
             self._remove_staged_export(staging_pdf)
             raise
         try:
@@ -353,10 +380,10 @@ class MacPowerPointExporter(PowerPointExporter):
                     target_full_name,
                     str(staging_pdf),
                 ],
-                timeout=timeout,
+                timeout=_remaining_seconds(deadline),
             )
         except subprocess.TimeoutExpired as error:
-            self._cleanup(target_full_name, timeout=timeout)
+            self._cleanup([target_full_name], timeout=min(timeout, 15))
             self._remove_staged_export(staging_pdf)
             raise RenderFailure(
                 "POWERPOINT_EXPORT_TIMEOUT",
@@ -365,7 +392,7 @@ class MacPowerPointExporter(PowerPointExporter):
                 transient=True,
             ) from error
         except OSError as error:
-            self._cleanup(target_full_name, timeout=timeout)
+            self._cleanup([target_full_name], timeout=min(timeout, 15))
             self._remove_staged_export(staging_pdf)
             raise RenderFailure(
                 "AUTOMATION_UNAVAILABLE",
@@ -375,7 +402,7 @@ class MacPowerPointExporter(PowerPointExporter):
 
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "AppleScript failed").strip()
-            self._cleanup(target_full_name, timeout=timeout)
+            self._cleanup([target_full_name], timeout=min(timeout, 15))
             self._remove_staged_export(staging_pdf)
             transient_markers = (
                 "-600",
@@ -398,7 +425,10 @@ class MacPowerPointExporter(PowerPointExporter):
             )
 
         try:
-            self._wait_for_staged_pdf(staging_pdf, timeout=timeout)
+            self._wait_for_staged_pdf(
+                staging_pdf,
+                timeout=_remaining_seconds(deadline),
+            )
             shutil.copyfile(staging_pdf, destination)
             if _sha256(staging_pdf) != _sha256(destination):
                 raise RenderFailure(
@@ -445,6 +475,8 @@ class PdfRuntime:
                         with self._fitz().open(path) as document:
                             if document.page_count > 0:
                                 return int(document.page_count)
+                    except RenderFailure:
+                        raise
                     except Exception:
                         stable_reads = 0
             time.sleep(0.25)
@@ -563,7 +595,7 @@ def _artifact(path: Path) -> Dict[str, Any]:
     return {"path": str(path), "sha256": _sha256(path), "bytes": path.stat().st_size}
 
 
-def render_presentation(
+def _render_presentation(
     options: RenderOptions,
     *,
     exporter: Optional[PowerPointExporter] = None,
@@ -601,14 +633,18 @@ def render_presentation(
     export_result: Optional[ExportResult] = None
     page_count = 0
     for attempt in (1, 2):
+        attempt_deadline = time.monotonic() + options.timeout
         try:
             export_result = exporter.export(
                 snapshot.resolve(),
                 native_pdf.resolve(),
                 settle_seconds=options.settle_seconds,
-                timeout=options.timeout,
+                timeout=_remaining_seconds(attempt_deadline),
             )
-            page_count = pdf.wait_until_stable(native_pdf, timeout=options.timeout)
+            page_count = pdf.wait_until_stable(
+                native_pdf,
+                timeout=_remaining_seconds(attempt_deadline),
+            )
             export_result = replace(export_result, attempts=attempt)
             break
         except RenderFailure as error:
@@ -696,3 +732,23 @@ def render_presentation(
             "manifest": str(manifest_path.resolve()),
         },
     }
+
+
+def render_presentation(
+    options: RenderOptions,
+    *,
+    exporter: Optional[PowerPointExporter] = None,
+    pdf_runtime: Optional[PdfRuntime] = None,
+) -> Dict[str, Any]:
+    try:
+        return _render_presentation(
+            options,
+            exporter=exporter,
+            pdf_runtime=pdf_runtime,
+        )
+    except OSError as error:
+        raise RenderFailure(
+            "FILESYSTEM_OPERATION_FAILED",
+            f"A render artifact filesystem operation failed: {error}",
+            "Confirm the source and Project Workspace are readable and writable, then retry.",
+        ) from error

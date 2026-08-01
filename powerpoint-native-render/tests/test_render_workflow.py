@@ -86,6 +86,16 @@ class RecordingPdfRuntime(PdfRuntime):
             raise AssertionError("native PDF changed before derivation")
 
 
+class MissingFitzPdfRuntime(PdfRuntime):
+    @staticmethod
+    def _fitz() -> object:
+        raise RenderFailure(
+            "MISSING_PDF_RUNTIME",
+            "PyMuPDF is unavailable.",
+            "Install PyMuPDF.",
+        )
+
+
 class FlakyExporter(RecordingExporter):
     def export(
         self,
@@ -141,6 +151,21 @@ class TimeoutThenCleanupRunner(AutomationRunner):
         return subprocess.CompletedProcess(["osascript"], 0, "", "")
 
 
+class DiscoveryTimeoutThenCleanupRunner(AutomationRunner):
+    def __init__(self) -> None:
+        self.scripts: list[str] = []
+
+    def run(
+        self, script: str, arguments: list[str], *, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        self.scripts.append(script)
+        if script == MACOS_DISCOVER_APPLESCRIPT:
+            raise subprocess.TimeoutExpired("osascript", timeout)
+        if script == MACOS_CLEANUP_APPLESCRIPT:
+            return subprocess.CompletedProcess(["osascript"], 0, "closed\n", "")
+        raise AssertionError("export should not run after discovery fails")
+
+
 class SuccessfulStagedExportRunner(AutomationRunner):
     def __init__(self, source: Path) -> None:
         self.source = source
@@ -161,6 +186,77 @@ class SuccessfulStagedExportRunner(AutomationRunner):
 
 
 class RenderWorkflowTests(unittest.TestCase):
+    def test_render_cli_wraps_workspace_filesystem_errors_as_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "fixture.pptx"
+            workspace_file = root / "not-a-directory"
+            make_minimal_pptx(source)
+            workspace_file.write_text("occupied", encoding="utf-8")
+            environment = os.environ.copy()
+            environment["PYTHONPATH"] = str(CLI_ROOT)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "powerpoint_native_render.cli",
+                    "render",
+                    str(source),
+                    "--workspace",
+                    str(workspace_file),
+                ],
+                cwd=PACKAGE_ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            payload = json.loads(result.stdout)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(payload["error_code"], "FILESYSTEM_OPERATION_FAILED")
+            self.assertEqual(result.stderr, "")
+
+    def test_missing_pymupdf_is_not_reclassified_as_pdf_instability(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            pdf = Path(temporary_directory) / "native.pdf"
+            pdf.write_bytes(b"%PDF-placeholder")
+
+            with self.assertRaises(RenderFailure) as caught:
+                MissingFitzPdfRuntime().wait_until_stable(pdf, timeout=30)
+
+            self.assertEqual(caught.exception.code, "MISSING_PDF_RUNTIME")
+
+    def test_discovery_timeout_closes_only_a_known_snapshot_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "snapshot" / "source.pptx"
+            source.parent.mkdir()
+            source.write_bytes(b"source")
+            runner = DiscoveryTimeoutThenCleanupRunner()
+            launcher = RecordingLauncher()
+            exporter = MacPowerPointExporter(
+                runner=runner,
+                launcher=launcher,
+                osascript="/usr/bin/osascript",
+                staging_root=root / "staging",
+            )
+
+            with self.assertRaises(RenderFailure) as caught:
+                exporter.export(
+                    source,
+                    root / "powerpoint-export.pdf",
+                    settle_seconds=3,
+                    timeout=30,
+                )
+
+            self.assertEqual(
+                runner.scripts,
+                [MACOS_DISCOVER_APPLESCRIPT, MACOS_CLEANUP_APPLESCRIPT],
+            )
+            self.assertEqual(caught.exception.code, "POWERPOINT_TARGET_DISCOVERY_FAILED")
+
     def test_macos_export_stages_inside_powerpoint_container_then_copies_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -224,10 +320,6 @@ class RenderWorkflowTests(unittest.TestCase):
             self.assertEqual(launcher.calls, [(source, 3, 30)])
             self.assertNotIn("open source", MACOS_APPLESCRIPT)
             self.assertNotIn("last presentation", MACOS_APPLESCRIPT)
-            self.assertIn(
-                "output type of print options of targetDeck to print slides",
-                MACOS_APPLESCRIPT,
-            )
             self.assertNotIn("print notes pages", MACOS_APPLESCRIPT)
 
     def test_render_cli_reports_a_structured_error_on_stdout(self) -> None:
@@ -367,12 +459,13 @@ class RenderWorkflowTests(unittest.TestCase):
                 }
                 values[field] = value
                 with self.subTest(field=field, value=value):
-                    with self.assertRaisesRegex(Exception, code):
+                    with self.assertRaises(RenderFailure) as caught:
                         render_presentation(
                             RenderOptions(**values),
                             exporter=RecordingExporter(),
                             pdf_runtime=RecordingPdfRuntime(),
                         )
+                    self.assertEqual(caught.exception.code, code)
 
 
 if __name__ == "__main__":
