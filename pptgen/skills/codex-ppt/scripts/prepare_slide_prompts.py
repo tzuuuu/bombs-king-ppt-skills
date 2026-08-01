@@ -14,7 +14,7 @@ import re
 import sys
 from typing import Any, Dict, Iterable, List, Optional
 
-from chart_manifest import ChartManifestError, load_chart_manifest
+from chart_manifest import ChartManifestError, load_chart_manifest, planned_chart_ids
 from slide_run_state import (
     DEFAULT_MAX_CONCURRENT_SLIDES,
     now_iso,
@@ -294,19 +294,6 @@ def _job_images(
     return images
 
 
-def _planned_chart_ids(slide: Dict[str, Any], *, slide_id: str) -> List[str]:
-    chart_ids: List[str] = []
-    for entry in _as_list(slide.get("data_charts")):
-        value = entry.get("chart_id") if isinstance(entry, dict) else entry
-        if not isinstance(value, str) or not value.strip():
-            _die(f"{slide_id}: every data_charts entry must identify a chart_id.")
-        chart_id = value.strip()
-        if chart_id in chart_ids:
-            _die(f"{slide_id}: duplicate planned Data Chart: {chart_id}")
-        chart_ids.append(chart_id)
-    return chart_ids
-
-
 def _chart_job_context(charts: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     images: List[Dict[str, Any]] = []
     metadata: List[Dict[str, Any]] = []
@@ -451,7 +438,10 @@ def main() -> int:
     planned_by_slide: Dict[str, List[str]] = {}
     for _, slide, number in numbered_slides:
         slide_id = f"slide_{number:02d}"
-        planned_by_slide[slide_id] = _planned_chart_ids(slide, slide_id=slide_id)
+        try:
+            planned_by_slide[slide_id] = planned_chart_ids(slide, slide_id=slide_id)
+        except ChartManifestError as exc:
+            _die(str(exc))
         planned_identities.update((slide_id, chart_id) for chart_id in planned_by_slide[slide_id])
     try:
         _, manifest_charts = load_chart_manifest(

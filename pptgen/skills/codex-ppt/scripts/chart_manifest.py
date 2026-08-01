@@ -23,7 +23,7 @@ def _read_object(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _workspace_path(workspace: Path, value: str, label: str) -> Path:
+def workspace_path(workspace: Path, value: str, label: str) -> Path:
     raw = Path(value)
     if raw.is_absolute():
         raise ChartManifestError(f"{label} must use a workspace-relative path: {value}")
@@ -33,6 +33,23 @@ def _workspace_path(workspace: Path, value: str, label: str) -> Path:
     except ValueError as exc:
         raise ChartManifestError(f"{label} escapes the Project Workspace: {value}") from exc
     return resolved
+
+
+def planned_chart_ids(slide: dict[str, Any], *, slide_id: str) -> list[str]:
+    """Return normalized chart IDs from one deck-spec slide."""
+    entries = slide.get("data_charts") or []
+    if not isinstance(entries, list):
+        entries = [entries]
+    chart_ids: list[str] = []
+    for entry in entries:
+        value = entry.get("chart_id") if isinstance(entry, dict) else entry
+        if not isinstance(value, str) or not value.strip():
+            raise ChartManifestError(f"{slide_id} has an invalid planned Data Chart")
+        chart_id = value.strip()
+        if chart_id in chart_ids:
+            raise ChartManifestError(f"{slide_id} has a duplicate planned Data Chart: {chart_id}")
+        chart_ids.append(chart_id)
+    return chart_ids
 
 
 def _has_transparency(path: Path) -> bool:
@@ -69,7 +86,7 @@ def load_chart_manifest(
     if not isinstance(charts, list):
         raise ChartManifestError("chart_manifest.json charts must be a list")
 
-    seen: set[tuple[str, str]] = set()
+    seen_chart_ids: set[str] = set()
     validated: list[dict[str, Any]] = []
     forbidden_fields = {"placement", "coordinates", "dimensions", "bounding_box", "bbox"}
     chart_assets = (workspace / "chart_assets").resolve()
@@ -86,10 +103,9 @@ def load_chart_manifest(
                 raise ChartManifestError(f"Chart manifest entry {index} has invalid {field}")
         slide_id = chart["slide_id"]
         chart_id = chart["chart_id"]
-        identity = (slide_id, chart_id)
-        if identity in seen:
-            raise ChartManifestError(f"Duplicate chart identity: {slide_id}/{chart_id}")
-        seen.add(identity)
+        if chart_id in seen_chart_ids:
+            raise ChartManifestError(f"Duplicate chart identity: {chart_id}")
+        seen_chart_ids.add(chart_id)
         if slide_id not in slide_ids:
             raise ChartManifestError(f"Chart references unknown slide: {slide_id}/{chart_id}")
         if chart.get("required_downstream") is not True:
@@ -103,7 +119,7 @@ def load_chart_manifest(
             value = package.get(member)
             if not isinstance(value, str) or not value.strip():
                 raise ChartManifestError(f"Chart package is missing {member}: {slide_id}/{chart_id}")
-            path = _workspace_path(workspace, value, f"{slide_id}/{chart_id} {member}")
+            path = workspace_path(workspace, value, f"{slide_id}/{chart_id} {member}")
             try:
                 path.relative_to(chart_assets)
             except ValueError as exc:

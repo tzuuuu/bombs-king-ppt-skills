@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
-from chart_manifest import ChartManifestError, load_chart_manifest
+from chart_manifest import ChartManifestError, load_chart_manifest, planned_chart_ids, workspace_path
 
 
 class HandoffError(ValueError):
@@ -40,18 +40,6 @@ def _read_json(path: Path) -> dict:
     return payload
 
 
-def _require_inside(workspace: Path, value: str, label: str) -> Path:
-    raw = Path(value)
-    if raw.is_absolute():
-        raise HandoffError(f"{label} must use a workspace-relative path: {value}")
-    resolved = (workspace / raw).resolve()
-    try:
-        resolved.relative_to(workspace)
-    except ValueError as exc:
-        raise HandoffError(f"{label} escapes the Project Workspace: {value}") from exc
-    return resolved
-
-
 def _validate_workspace(target: str) -> int:
     workspace = Path(target).expanduser().resolve()
     if not workspace.is_dir():
@@ -69,6 +57,28 @@ def _validate_workspace(target: str) -> int:
     deck_spec = _read_json(workspace / "deck_spec.json")
     jobs = _read_json(workspace / "slide_jobs.json")
     run_state = _read_json(workspace / "slide_run_state.json")
+    spec_slides = deck_spec.get("slides")
+    if not isinstance(spec_slides, list) or not spec_slides:
+        raise HandoffError("deck_spec.json must contain at least one slide")
+    planned_charts: set[tuple[str, str]] = set()
+    expected_slide_ids: set[str] = set()
+    for fallback, slide in enumerate(spec_slides, start=1):
+        if not isinstance(slide, dict):
+            raise HandoffError(f"Deck spec slide {fallback} must be an object")
+        number = slide.get("number", fallback)
+        try:
+            slide_id = f"slide_{int(number):02d}"
+        except (TypeError, ValueError) as exc:
+            raise HandoffError(f"Invalid deck spec slide number: {number}") from exc
+        if slide_id in expected_slide_ids:
+            raise HandoffError(f"Duplicate deck spec slide identity: {slide_id}")
+        expected_slide_ids.add(slide_id)
+        try:
+            chart_ids = planned_chart_ids(slide, slide_id=slide_id)
+        except ChartManifestError as exc:
+            raise HandoffError(str(exc)) from exc
+        planned_charts.update((slide_id, chart_id) for chart_id in chart_ids)
+
     slides = jobs.get("slides")
     if not isinstance(slides, list) or not slides:
         raise HandoffError("slide_jobs.json must contain at least one slide")
@@ -88,12 +98,28 @@ def _validate_workspace(target: str) -> int:
         out = slide.get("out") or f"origin_image/{slide_id}.png"
         if not isinstance(out, str):
             raise HandoffError(f"{slide_id} has an invalid output path")
-        image_path = _require_inside(workspace, out, f"{slide_id} output")
+        try:
+            image_path = workspace_path(workspace, out, f"{slide_id} output")
+        except ChartManifestError as exc:
+            raise HandoffError(str(exc)) from exc
         if image_path.parent != (workspace / "origin_image").resolve():
             raise HandoffError(f"{slide_id} output must be in the Slide Image Set")
+        expected_name = f"{slide_id}.png"
+        if image_path.name != expected_name:
+            raise HandoffError(f"{slide_id} output must be named {expected_name}")
         if not image_path.is_file():
             raise HandoffError(f"Missing expected slide image: {image_path.name}")
         expected_images.add(image_path)
+
+    missing_jobs = sorted(expected_slide_ids - slide_ids)
+    extra_jobs = sorted(slide_ids - expected_slide_ids)
+    if missing_jobs or extra_jobs:
+        details = []
+        if missing_jobs:
+            details.append("missing jobs: " + ", ".join(missing_jobs))
+        if extra_jobs:
+            details.append("unexpected jobs: " + ", ".join(extra_jobs))
+        raise HandoffError("Slide jobs do not match deck_spec.json (" + "; ".join(details) + ")")
 
     actual_images = {
         path.resolve()
@@ -107,27 +133,6 @@ def _validate_workspace(target: str) -> int:
         raise HandoffError(f"Slide jobs are not complete: {jobs.get('run_status')}")
     if run_state.get("status") != "slides_recorded":
         raise HandoffError(f"Slide run state is not complete: {run_state.get('status')}")
-
-    planned_charts: set[tuple[str, str]] = set()
-    spec_slides = deck_spec.get("slides", [])
-    if spec_slides is not None and not isinstance(spec_slides, list):
-        raise HandoffError("deck_spec.json slides must be a list")
-    for fallback, slide in enumerate(spec_slides or [], start=1):
-        if not isinstance(slide, dict):
-            raise HandoffError(f"Deck spec slide {fallback} must be an object")
-        number = slide.get("number", fallback)
-        try:
-            slide_id = f"slide_{int(number):02d}"
-        except (TypeError, ValueError) as exc:
-            raise HandoffError(f"Invalid deck spec slide number: {number}") from exc
-        entries = slide.get("data_charts") or []
-        if not isinstance(entries, list):
-            entries = [entries]
-        for entry in entries:
-            chart_id = entry.get("chart_id") if isinstance(entry, dict) else entry
-            if not isinstance(chart_id, str) or not chart_id.strip():
-                raise HandoffError(f"{slide_id} has an invalid planned Data Chart")
-            planned_charts.add((slide_id, chart_id.strip()))
 
     try:
         chart_manifest, charts = load_chart_manifest(
@@ -159,6 +164,14 @@ def _validate_workspace(target: str) -> int:
             "slide_count": len(slides),
             "selected_backend": jobs.get("selected_backend"),
             "recorded_result_status": jobs.get("run_status"),
+            "regenerated_slides": sorted(
+                slide["slide_id"]
+                for slide in slides
+                if int(slide.get("regeneration_count") or 0) > 0
+            ),
+            "blocked_slides": sorted(
+                slide["slide_id"] for slide in slides if slide.get("status") == "blocked"
+            ),
             "outline": str((workspace / "outline.md").resolve()),
             "outline_present": True,
             "speaker_script": str((workspace / "speech.md").resolve())
@@ -168,6 +181,10 @@ def _validate_workspace(target: str) -> int:
             "slide_jobs": str((workspace / "slide_jobs.json").resolve()),
             "chart_manifest": str(chart_manifest) if chart_manifest else None,
             "chart_count": len(charts),
+            "known_limitations": [
+                "The Slide Image Set is authoritative for layout and style.",
+                "Chart Source Packages are authoritative for Data Chart values; the generative full-slide image may differ.",
+            ],
         }
     )
     return 0

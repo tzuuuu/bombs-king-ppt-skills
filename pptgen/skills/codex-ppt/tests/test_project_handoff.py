@@ -12,6 +12,9 @@ from PIL import Image
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 HANDOFF_SCRIPT = SKILL_ROOT / "scripts" / "project_handoff.py"
+PREPARE_SCRIPT = SKILL_ROOT / "scripts" / "prepare_slide_prompts.py"
+DISPATCH_SCRIPT = SKILL_ROOT / "scripts" / "record_slide_dispatch.py"
+RECORD_SCRIPT = SKILL_ROOT / "scripts" / "record_slide_result.py"
 
 
 class ProjectHandoffCliTests(unittest.TestCase):
@@ -50,7 +53,10 @@ class ProjectHandoffCliTests(unittest.TestCase):
         for name in ("origin_image", "prompts", "chart_assets"):
             (workspace / name).mkdir(parents=True, exist_ok=True)
         (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
-        (workspace / "deck_spec.json").write_text("{}\n", encoding="utf-8")
+        (workspace / "deck_spec.json").write_text(
+            json.dumps({"slides": [{"number": 1}, {"number": 2}]}) + "\n",
+            encoding="utf-8",
+        )
         (workspace / "slide_run_state.json").write_text(
             json.dumps({"status": "slides_recorded"}) + "\n", encoding="utf-8"
         )
@@ -93,6 +99,9 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(summary["recorded_result_status"], "slides_recorded")
             self.assertTrue(summary["outline_present"])
             self.assertFalse(summary["speaker_script_present"])
+            self.assertEqual(summary["regenerated_slides"], [])
+            self.assertEqual(summary["blocked_slides"], [])
+            self.assertEqual(len(summary["known_limitations"]), 2)
 
     def add_chart_package(
         self,
@@ -133,11 +142,11 @@ class ProjectHandoffCliTests(unittest.TestCase):
             json.dumps(manifest) + "\n", encoding="utf-8"
         )
         number = int(slide_id.removeprefix("slide_"))
-        deck_spec = {
-            "slides": [
-                {"number": number, "data_charts": [chart_id]},
-            ]
-        }
+        deck_spec = json.loads((workspace / "deck_spec.json").read_text(encoding="utf-8"))
+        for slide in deck_spec["slides"]:
+            if slide["number"] == number:
+                slide["data_charts"] = [chart_id]
+                break
         (workspace / "deck_spec.json").write_text(
             json.dumps(deck_spec) + "\n", encoding="utf-8"
         )
@@ -167,6 +176,21 @@ class ProjectHandoffCliTests(unittest.TestCase):
             jobs["slides"][1]["status"] = "pending"
             (workspace / "slide_jobs.json").write_text(json.dumps(jobs) + "\n", encoding="utf-8")
             self.assert_invalid(workspace, "slide_02 is not ready for handoff")
+
+    def test_validate_rejects_jobs_or_names_that_do_not_match_deck_spec(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.create_slide_only_workspace(Path(temp_dir))
+            jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
+            jobs["slides"].pop()
+            (workspace / "slide_jobs.json").write_text(json.dumps(jobs) + "\n", encoding="utf-8")
+            self.assert_invalid(workspace, "missing jobs: slide_02")
+
+            workspace = self.create_slide_only_workspace(Path(temp_dir) / "second")
+            jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
+            jobs["slides"][0]["out"] = "origin_image/cover.png"
+            (workspace / "slide_jobs.json").write_text(json.dumps(jobs) + "\n", encoding="utf-8")
+            (workspace / "origin_image" / "cover.png").write_bytes(b"cover")
+            self.assert_invalid(workspace, "output must be named slide_01.png")
 
     def test_validate_rejects_intermediate_pptx(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -218,13 +242,93 @@ class ProjectHandoffCliTests(unittest.TestCase):
             (workspace / "chart_manifest.json").write_text(
                 json.dumps(manifest) + "\n", encoding="utf-8"
             )
-            spec = {"slides": [{"number": 2, "data_charts": ["chart_01", "chart_02"]}]}
+            spec = {"slides": [{"number": 1}, {"number": 2, "data_charts": ["chart_01", "chart_02"]}]}
             (workspace / "deck_spec.json").write_text(json.dumps(spec) + "\n", encoding="utf-8")
 
             result = self.run_cli("validate", str(workspace))
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)["chart_count"], 2)
+
+    def test_validate_rejects_chart_id_reused_on_another_slide(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.create_slide_only_workspace(Path(temp_dir))
+            self.add_chart_package(workspace)
+            manifest = json.loads((workspace / "chart_manifest.json").read_text(encoding="utf-8"))
+            duplicate = json.loads(json.dumps(manifest["charts"][0]))
+            duplicate["slide_id"] = "slide_01"
+            manifest["charts"].append(duplicate)
+            (workspace / "chart_manifest.json").write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+            self.assert_invalid(workspace, "Duplicate chart identity: chart_01")
+
+    def test_chart_and_chartless_slides_prepare_record_and_validate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "end-to-end"
+            for name in ("origin_image", "prompts", "chart_assets"):
+                (workspace / name).mkdir(parents=True, exist_ok=True)
+            (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
+            (workspace / "deck_spec.json").write_text(
+                json.dumps(
+                    {
+                        "deck_name": "end-to-end",
+                        "selected_image_backend": "built-in image tool",
+                        "slides": [
+                            {"number": 1, "title": "Chart", "data_charts": ["growth"]},
+                            {"number": 2, "title": "Summary"},
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.add_chart_package(workspace, slide_id="slide_01", chart_id="growth")
+
+            prepare = subprocess.run(
+                [sys.executable, str(PREPARE_SCRIPT), "--spec", str(workspace / "deck_spec.json"), "--out-dir", str(workspace)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(prepare.returncode, 0, prepare.stderr)
+            jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
+            self.assertEqual(jobs["slides"][0]["data_charts"][0]["chart_id"], "growth")
+            self.assertEqual(jobs["slides"][1]["data_charts"], [])
+
+            for number in (1, 2):
+                dispatch = subprocess.run(
+                    [sys.executable, str(DISPATCH_SCRIPT), str(workspace), "--slide", str(number), "--agent-id", f"agent-{number}"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(dispatch.returncode, 0, dispatch.stderr)
+                source = workspace / f"worker-slide-{number}.png"
+                Image.new("RGB", (4, 3), (number * 20, 30, 40)).save(source)
+                record = subprocess.run(
+                    [
+                        sys.executable,
+                        str(RECORD_SCRIPT),
+                        str(workspace),
+                        "--slide",
+                        str(number),
+                        "--agent-id",
+                        f"agent-{number}",
+                        "--backend-used",
+                        "built-in image tool",
+                        "--selected-source",
+                        str(source),
+                        "--qa-note",
+                        "visual QA passed",
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(record.returncode, 0, record.stderr)
+
+            handoff = self.run_cli("validate", str(workspace))
+            self.assertEqual(handoff.returncode, 0, handoff.stderr)
+            self.assertEqual(json.loads(handoff.stdout)["status"], "ready_for_handoff")
 
     def test_validate_rejects_opaque_chart_render(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
