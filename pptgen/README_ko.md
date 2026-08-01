@@ -47,6 +47,7 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 - 재사용 가능한 개인 스타일 라이브러리 구축: 덱 스타일이 마음에 들면 에이전트에게 `~/.codex-ppt-skill/references/`에 저장하도록 요청해 이후 덱에서 바로 재사용할 수 있습니다. 이 라이브러리는 skill 설치 밖에 있어 업데이트에도 유지되며, 같은 이름의 개인 스타일은 내장 스타일보다 우선합니다.
 - 병렬 서브에이전트 생성 지원: 샘플 슬라이드 승인 후 기본적으로 최대 30개의 페이지 worker를 목표로 슬라이드 하나당 서브에이전트 하나를 배정합니다. 사용 가능한 슬롯을 모두 채우고 worker가 반환되면 다음 대기 페이지를 즉시 배정하여 페이지 작업이 놀지 않게 합니다.
 - 필수 이미지 삽입 지원: 논문 그림, 실험 차트, 스크린샷, 아키텍처 다이어그램 등을 특정 슬라이드에 지정하면, 생성된 페이지가 그 주위로 레이아웃과 테마를 맞춥니다.
+- Master template 처리: 사용자가 `.ppt` 또는 `.pptx`를 지정하면 Gate 1에서 복사하고 PDF와 페이지별 PNG를 만든 뒤 각 슬라이드 prompt에 사용할 master 페이지를 계획합니다.
 - 발표 대본 생성: `speech.md`를 만들어 후속 재구성을 위해 Project Workspace에 보존합니다.
 - 재현 가능한 Data Chart 전달: 각 수치 차트에 Python 생성기, 실제 CSV/JSON 스냅샷, 투명 PNG 및 manifest 항목을 포함합니다.
 
@@ -84,6 +85,11 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 
 ```text
 {base_dir}/{deck_name}/     # 이 덱을 위한 독립 프로젝트 디렉터리
+├── template/               # 사용자 master template 원본, PDF 및 페이지별 PNG
+│   ├── template.pptx 또는 template.ppt
+│   ├── template.pdf
+│   ├── template-1.png      # 렌더링된 master template 1번 페이지
+│   └── template_manifest.json
 ├── origin_image/           # 최종 슬라이드 이미지만 저장
 │   ├── slide_01.png        # 1번 슬라이드 이미지
 │   ├── slide_02.png        # 2번 슬라이드 이미지
@@ -99,7 +105,7 @@ skill 설계와 사용에 대한 기본 소개는 [good-skill-design.pptx](asset
 └── speech.md               # 후속 재구성을 위해 보존되는 발표 대본
 ```
 
-`origin_image/`로 각 슬라이드에 사용된 최종 이미지를 검토할 수 있습니다. 하위 agent가 생성한 후보 이미지는 `generated_images/`에 모으며, parent agent가 선택한 후보를 `origin_image/`로 복사합니다. 파일은 `slide_01.png`, `slide_02.png` 식으로 순서대로 명명되어, 덱을 시각적으로 미리 보거나 특정 슬라이드 하나만 수정 요청하기 쉽습니다.
+사용자가 master template을 지정하면 Gate 1에서 `template/`로 먼저 처리하고, 각 슬라이드 prompt에 approved sample, 해당 Data Chart render 및 선택된 `template/template-<N>.png`를 계획합니다. 생성 이미지에는 보이는 페이지 번호를 넣지 않지만 파일명은 계속 `slide_XX.png`를 사용합니다. `origin_image/`로 최종 이미지를 검토할 수 있으며, 하위 agent 후보는 `generated_images/`에 저장하고 parent agent가 선택한 후보를 `origin_image/`로 복사합니다.
 
 `speech.md`는 후속 편집 가능 PowerPoint 재구성을 위해 보존되는 발표 대본입니다. PPTGen은 중간 PPTX를 조립하지 않습니다.
 

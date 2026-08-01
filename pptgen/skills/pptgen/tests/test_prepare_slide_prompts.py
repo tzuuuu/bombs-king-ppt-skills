@@ -56,6 +56,64 @@ class PrepareSlidePromptsCliTests(unittest.TestCase):
             )
             self.assertEqual(prompt_job["candidate_output_dir"], "generated_images")
 
+    def test_template_and_reference_inputs_are_planned_in_each_prompt_job(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir) / "template-deck"
+            workspace.mkdir(parents=True)
+            (workspace / "template").mkdir()
+            (workspace / "origin_image").mkdir()
+            Image.new("RGB", (8, 5), (245, 245, 245)).save(workspace / "template" / "template-1.png")
+            Image.new("RGB", (8, 5), (255, 255, 255)).save(workspace / "origin_image" / "slide_01.png")
+            spec_path = workspace / "deck_spec.json"
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "deck_name": "template-deck",
+                        "selected_image_backend": "built-in image tool",
+                        "template": {
+                            "source": "template/template.pptx",
+                            "default_page": 1,
+                        },
+                        "sample_generation_method": {
+                            "backend_used": "built-in image tool",
+                            "approved_sample_path": "origin_image/slide_01.png",
+                        },
+                        "slides": [{"number": 1, "title": "Template slide"}],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PREPARE_SCRIPT),
+                    "--spec",
+                    str(spec_path),
+                    "--out-dir",
+                    str(workspace),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            job = json.loads((workspace / "prompts" / "slide_01.json").read_text(encoding="utf-8"))
+            self.assertEqual(job["template_page"], 1)
+            self.assertFalse(job["render_slide_number"])
+            self.assertEqual(job["reference_inputs"]["master_template"]["template_page"], 1)
+            self.assertEqual(job["reference_inputs"]["data_charts"], [])
+            self.assertEqual(
+                job["reference_inputs"]["approved_sample"]["path"],
+                str((workspace / "origin_image" / "slide_01.png").resolve()),
+            )
+            input_paths = {item["path"] for item in job["input_images"]}
+            self.assertIn(str((workspace / "template" / "template-1.png").resolve()), input_paths)
+            self.assertIn("Master Template Rule", job["prompt"])
+            self.assertIn("Do not render a slide/page number", job["prompt"])
+
     def test_planned_data_chart_becomes_required_slide_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "growth-deck"

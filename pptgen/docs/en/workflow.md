@@ -15,7 +15,7 @@ The agent first determines:
 - Content that must be included or excluded
 - Whether any image assets are required
 
-The agent first shows you a source brief and an asset inventory. Every asset records its source or path, intended role, and current availability. Core brief fields need explicit values or assumptions you approve; unresolved questions keep this stage open.
+The agent first shows you a source brief and an asset inventory. Every asset records its source or path, intended role, and current availability. Core brief fields need explicit values or assumptions you approve; unresolved questions keep this stage open. If you specify a `.ppt` or `.pptx` master template, the agent first copies it to `template/template.ppt` or `template/template.pptx`, exports `template/template.pdf`, renders `template/template-1.png` and the remaining pages, and records the intended master-page mapping.
 
 ## Stage 2: Confirm the Outline
 
@@ -52,7 +52,7 @@ Generate one sample slide first and check:
 - Whether the colors and layout are stable
 - Whether the design can scale to the full presentation
 
-Generate the full deck only after the sample slide is approved. Every sub-agent candidate is saved under the workspace's `generated_images/` directory; the parent agent copies the selected candidate into `origin_image/slide_XX.png`.
+Generate the full deck only after the sample slide is approved. Each slide prompt plans the approved sample, applicable Data Chart renders, and the selected `template/template-<N>.png` whenever those inputs exist. Every sub-agent candidate is saved under the workspace's `generated_images/` directory; the parent agent copies the selected candidate into `origin_image/slide_XX.png`. Generated images contain no visible page number, while filenames remain `slide_XX.png`.
 
 ## Stage 6: Batch Generation
 

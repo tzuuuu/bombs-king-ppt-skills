@@ -15,6 +15,7 @@ Read this before creating downstream artifacts or reporting progress. `SKILL.md`
 - If you need an internal planning artifact before approval, name it with `.draft.` such as `deck_spec.draft.json` or `speech.draft.md`, and clearly report that it is not final.
 - Create downstream artifacts (`deck_spec.json`, `prompts/`, `slide_jobs.json`, Chart Source Packages, `chart_manifest.json`, `speech.md`, and final slide images) only at the gate that owns them.
 - When the deck uses required source images, keep style selection and image generation behind approval of the slide-to-image mapping.
+- If the user specifies a `.ppt` or `.pptx` master template, Gate 1 may create the source template package before outline approval: `template/template.pptx` or `template/template.ppt`, `template/template.pdf`, rendered `template/template-<N>.png` pages, and `template/template_manifest.json`. These are source/reference artifacts, not final slide images or an intermediate generated PPTX.
 
 ## Visible Progress Projection
 

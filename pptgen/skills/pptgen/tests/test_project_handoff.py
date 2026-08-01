@@ -45,13 +45,14 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(Path(summary["project_workspace"]), workspace.resolve())
             self.assertTrue((workspace / "origin_image").is_dir())
             self.assertTrue((workspace / "generated_images").is_dir())
+            self.assertTrue((workspace / "template").is_dir())
             self.assertTrue((workspace / "prompts").is_dir())
             self.assertTrue((workspace / "chart_assets").is_dir())
             self.assertEqual(list(workspace.glob("*.pptx")), [])
 
     def create_slide_only_workspace(self, root: Path) -> Path:
         workspace = root / "quarterly-report"
-        for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
+        for name in ("origin_image", "generated_images", "template", "prompts", "chart_assets"):
             (workspace / name).mkdir(parents=True, exist_ok=True)
         (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
         (workspace / "deck_spec.json").write_text(
@@ -70,11 +71,13 @@ class ProjectHandoffCliTests(unittest.TestCase):
                     "slide_id": "slide_01",
                     "status": "accepted",
                     "out": "origin_image/slide_01.png",
+                    "render_slide_number": False,
                 },
                 {
                     "slide_id": "slide_02",
                     "status": "recorded",
                     "out": "origin_image/slide_02.png",
+                    "render_slide_number": False,
                 },
             ],
         }
@@ -166,6 +169,53 @@ class ProjectHandoffCliTests(unittest.TestCase):
             self.assertEqual(
                 summary["chart_manifest"], str((workspace / "chart_manifest.json").resolve())
             )
+
+    def test_validate_accepts_complete_master_template_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = self.create_slide_only_workspace(Path(temp_dir))
+            template_dir = workspace / "template"
+            (template_dir / "template.pptx").write_bytes(b"pptx source")
+            (template_dir / "template.pdf").write_bytes(b"%PDF-1.7\n")
+            Image.new("RGB", (4, 3), (240, 240, 240)).save(template_dir / "template-1.png")
+            (template_dir / "template_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "source": "template/template.pptx",
+                        "pdf": "template/template.pdf",
+                        "rendered_pages": ["template/template-1.png"],
+                        "page_count": 1,
+                        "dpi": 180,
+                        "renderer": "test",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            deck_spec = json.loads((workspace / "deck_spec.json").read_text(encoding="utf-8"))
+            deck_spec["template"] = {
+                "source": "template/template.pptx",
+                "default_page": 1,
+            }
+            (workspace / "deck_spec.json").write_text(
+                json.dumps(deck_spec) + "\n", encoding="utf-8"
+            )
+            jobs = json.loads((workspace / "slide_jobs.json").read_text(encoding="utf-8"))
+            for slide in jobs["slides"]:
+                slide["template_page"] = 1
+                slide["input_images"] = [
+                    {
+                        "path": str((template_dir / "template-1.png").resolve()),
+                        "role": "strict master template page 1",
+                    }
+                ]
+            (workspace / "slide_jobs.json").write_text(
+                json.dumps(jobs) + "\n", encoding="utf-8"
+            )
+
+            result = self.run_cli("validate", str(workspace))
+
+            self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_validate_rejects_missing_slide_and_incomplete_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -266,7 +316,7 @@ class ProjectHandoffCliTests(unittest.TestCase):
     def test_chart_and_chartless_slides_prepare_record_and_validate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "end-to-end"
-            for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
+            for name in ("origin_image", "generated_images", "template", "prompts", "chart_assets"):
                 (workspace / name).mkdir(parents=True, exist_ok=True)
             (workspace / "outline.md").write_text("# Approved outline\n", encoding="utf-8")
             (workspace / "deck_spec.json").write_text(

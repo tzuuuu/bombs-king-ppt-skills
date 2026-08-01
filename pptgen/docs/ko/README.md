@@ -30,6 +30,7 @@ Codex PPT는 Codex용 전체 슬라이드 이미지 및 Project Workspace 생성
 - 참고 자료 기반 스타일 재현: 사용자가 제공한 PPT, PDF 또는 스크린샷을 읽고 각 페이지의 이미지 스타일을 이해한 뒤 유사하게 생성할 수 있습니다.
 - 개인 스타일 라이브러리 축적: 마음에 드는 스타일을 `~/.codex-ppt-skill/references/`에 저장할 수 있습니다. skill 설치 디렉터리 외부에 보관되므로 skill을 업데이트해도 사라지지 않으며, 이후 이름으로 바로 재사용할 수 있습니다.
 - 지정 이미지 삽입: 논문 원본 이미지, 실험 결과 그래프, 아키텍처 다이어그램 또는 스크린샷을 특정 슬라이드에 사용하도록 지정할 수 있습니다.
+- Master template 처리: 사용자가 `.ppt` 또는 `.pptx`를 지정하면 Gate 1에서 복사하고 PDF와 페이지별 PNG를 만든 뒤 각 슬라이드 prompt에 사용할 master 페이지를 계획합니다.
 - 여러 agent 환경 지원: Codex 외에도 Claude Code, OpenClaw, Hermes Agent 등 `SKILL.md`를 지원하는 agent에서 사용할 수 있습니다.
 - 검증된 Project Workspace 전달: `outline.md`, 각 슬라이드 이미지, `speech.md`, 실행 상태 및 재현 가능한 Chart Source Package를 보존하고 중간 PPTX를 조립하지 않습니다.
 - 서드파티 API를 통한 텍스트 모델 및 `gpt-image-2` 이미지 생성 모델 사용 지원.

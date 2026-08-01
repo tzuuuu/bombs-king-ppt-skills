@@ -22,7 +22,7 @@ def _print_json(payload: dict) -> None:
 
 def _init_workspace(target: str) -> int:
     workspace = Path(target).expanduser().resolve()
-    for name in ("origin_image", "generated_images", "prompts", "chart_assets"):
+    for name in ("origin_image", "generated_images", "template", "prompts", "chart_assets"):
         (workspace / name).mkdir(parents=True, exist_ok=True)
     _print_json(
         {
@@ -30,6 +30,7 @@ def _init_workspace(target: str) -> int:
             "project_workspace": str(workspace),
             "slide_image_set": str((workspace / "origin_image").resolve()),
             "generated_images": str((workspace / "generated_images").resolve()),
+            "template": str((workspace / "template").resolve()),
         }
     )
     return 0
@@ -47,12 +48,58 @@ def _read_json(path: Path) -> dict:
     return payload
 
 
+def _template_images(workspace: Path) -> set[Path]:
+    return {
+        path.resolve()
+        for path in (workspace / "template").glob("template-*.png")
+        if path.is_file()
+    }
+
+
+def _validate_template_package(workspace: Path, deck_spec: dict) -> set[Path]:
+    template_dir = workspace / "template"
+    sources = [
+        path
+        for path in (template_dir / "template.ppt", template_dir / "template.pptx")
+        if path.is_file()
+    ]
+    pdf = template_dir / "template.pdf"
+    manifest = template_dir / "template_manifest.json"
+    images = _template_images(workspace)
+    has_template_artifact = bool(sources or pdf.exists() or manifest.exists() or images)
+    template_spec = deck_spec.get("template")
+    if template_spec is not None and not isinstance(template_spec, dict):
+        raise HandoffError("deck_spec.json template must be an object")
+    if not has_template_artifact and template_spec is None:
+        return set()
+    if len(sources) != 1:
+        raise HandoffError("template/ must contain exactly one template.ppt or template.pptx")
+    if not pdf.is_file():
+        raise HandoffError("Missing required template artifact: template/template.pdf")
+    if not manifest.is_file():
+        raise HandoffError("Missing required template artifact: template/template_manifest.json")
+    if not images:
+        raise HandoffError("Missing rendered template pages: template/template-*.png")
+    manifest_data = _read_json(manifest)
+    rendered_pages = manifest_data.get("rendered_pages")
+    if not isinstance(rendered_pages, list) or not rendered_pages:
+        raise HandoffError("template_manifest.json must list rendered_pages")
+    manifest_images = {
+        workspace_path(workspace, value, "template rendered page")
+        for value in rendered_pages
+        if isinstance(value, str)
+    }
+    if manifest_images != images:
+        raise HandoffError("template_manifest.json rendered_pages do not match template PNG files")
+    return images
+
+
 def _validate_workspace(target: str) -> int:
     workspace = Path(target).expanduser().resolve()
     if not workspace.is_dir():
         raise HandoffError(f"Project Workspace does not exist: {workspace}")
 
-    for directory in ("origin_image", "generated_images", "prompts", "chart_assets"):
+    for directory in ("origin_image", "generated_images", "template", "prompts", "chart_assets"):
         if not (workspace / directory).is_dir():
             raise HandoffError(f"Missing required workspace directory: {directory}")
     for artifact in ("outline.md", "deck_spec.json"):
@@ -62,6 +109,7 @@ def _validate_workspace(target: str) -> int:
         raise HandoffError("Project Workspace must not contain an intermediate PPTX")
 
     deck_spec = _read_json(workspace / "deck_spec.json")
+    template_images = _validate_template_package(workspace, deck_spec)
     jobs = _read_json(workspace / "slide_jobs.json")
     run_state = _read_json(workspace / "slide_run_state.json")
     spec_slides = deck_spec.get("slides")
@@ -102,6 +150,8 @@ def _validate_workspace(target: str) -> int:
         status = slide.get("status")
         if status not in {"accepted", "recorded"}:
             raise HandoffError(f"{slide_id} is not ready for handoff: {status}")
+        if slide.get("render_slide_number") is not False:
+            raise HandoffError(f"{slide_id} must declare render_slide_number=false")
         out = slide.get("out") or f"origin_image/{slide_id}.png"
         if not isinstance(out, str):
             raise HandoffError(f"{slide_id} has an invalid output path")
@@ -116,6 +166,19 @@ def _validate_workspace(target: str) -> int:
             raise HandoffError(f"{slide_id} output must be named {expected_name}")
         if not image_path.is_file():
             raise HandoffError(f"Missing expected slide image: {image_path.name}")
+        if template_images:
+            input_images = slide.get("input_images")
+            if not isinstance(input_images, list):
+                raise HandoffError(f"{slide_id} must record its template input image")
+            referenced_template_images = {
+                Path(item["path"]).expanduser().resolve()
+                for item in input_images
+                if isinstance(item, dict) and isinstance(item.get("path"), str)
+            }
+            if not template_images.intersection(referenced_template_images):
+                raise HandoffError(
+                    f"{slide_id} must reference a rendered template page from template/"
+                )
         expected_images.add(image_path)
 
     missing_jobs = sorted(expected_slide_ids - slide_ids)

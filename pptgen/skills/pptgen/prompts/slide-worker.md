@@ -7,6 +7,7 @@ Generate slide <N> for this pptgen deck.
 
 Deck dir: <absolute deck dir>
 Slide job file: <absolute deck dir>/prompts/slide_<NN>.json
+Master template image selected by parent (when configured): <absolute deck dir>/template/template-<TEMPLATE_PAGE>.png
 Candidate output directory owned by parent: <absolute deck dir>/generated_images/
 Output target owned by parent: <absolute deck dir>/origin_image/slide_<NN>.png
 Selected image backend: <built-in image tool OR CLI/API fallback>
@@ -21,6 +22,7 @@ Sample generation method copied from the approved sample:
 - handoff_rule: use this same backend/tool/mode; return a blocker if unavailable
 Input images already prepared by the parent:
 - <absolute path> - approved sample slide style reference; match style only, do not copy layout
+- <absolute path> - strict master template page when configured; preserve the rendered master background, margins, brand elements, placeholder regions, and lower-right page-number area
 - <absolute path> - strict input asset; preserve labels/data/arrows/content
 
 Read the JSON job file, then follow its `prompt` field exactly. Use the selected image backend and the recorded sample generation method only.
@@ -29,6 +31,7 @@ You must produce the final slide candidate by calling the selected image generat
 - CLI/API fallback mode: use `scripts/image_gen.py` with the saved job prompt and required image inputs.
 - Save or copy every original candidate image into `<absolute deck dir>/generated_images/` before returning. The parent agent only accepts a selected source from this directory.
 - The parent agent copies the selected candidate into `origin_image/slide_<NN>.png`; do not write the final image there yourself.
+- When the job contains `template_page`, use the prepared `template/template-<TEMPLATE_PAGE>.png` as the source of truth for the master background and layout. Preserve its visible structure and keep regions absent from it empty; the image model supplies slide content within that structure.
 
 Forbidden for final slide image creation:
 - local drawing or rendering scripts
@@ -50,8 +53,10 @@ Do not edit slide job files, Chart Source Packages, chart_manifest.json, origin_
 Before returning, visually check:
 - Chinese text is readable and not garbled
 - style matches the approved sample slide
+- master template background and visible layout elements match the supplied `template-<TEMPLATE_PAGE>.png`
 - required source images are visibly included and not replaced by a similar redraw
 - no overlapping or truncated important content
+- no slide/page number is rendered; leave the lower-right page-number area available for downstream numbering
 
 Return only:
 backend_used=<built-in image tool OR scripts/image_gen.py>

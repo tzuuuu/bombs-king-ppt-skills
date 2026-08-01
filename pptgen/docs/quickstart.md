@@ -30,6 +30,7 @@
 最终通常会得到：
 
 - `outline.md`：PPT 大纲
+- `template/`：如果指定母片，包含复制的 `.ppt/.pptx`、`template.pdf`、逐页 `template-<N>.png` 与 manifest
 - `generated_images/`：子智能体生成的所有中间候选图，包括淘汰版本
 - `origin_image/slide_XX.png`：每页正式图片
 - `speech.md`：每页演讲备注

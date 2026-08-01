@@ -30,6 +30,7 @@ If you are already using the skill and have encountered a problem, see the [FAQ]
 - Style matching from reference materials: The skill can review a user-provided presentation, PDF, or screenshots, understand the visual style of each page, and generate a similar style.
 - Personal style library: Styles you like can be saved to `~/.codex-ppt-skill/references/`, outside the skill installation directory. They remain available after skill updates and can be reused by name in future projects.
 - Place specified source materials on designated slides: You can assign original paper figures, experiment results, architecture diagrams, or screenshots to specific slides.
+- Master-template preparation: when a user supplies a `.ppt` or `.pptx`, Gate 1 copies it, exports a PDF, renders page PNGs, and plans the available master page in each slide prompt.
 - Multiple agent environments: In addition to Codex, the skill works with agents that support `SKILL.md`, including Claude Code, OpenClaw, and Hermes Agent.
 - Validated Project Workspace handoff: The skill retains `outline.md`, individual slide images, `speech.md`, run state, and reproducible Chart Source Packages without assembling an intermediate PPTX.
 - Third-party API support for text models and the `gpt-image-2` image-generation model.

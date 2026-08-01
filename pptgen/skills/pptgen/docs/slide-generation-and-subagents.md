@@ -31,6 +31,11 @@ The helper writes:
 
 ```text
 {base_dir}/{deck_name}/
+├── template/
+│   ├── template.pptx or template.ppt
+│   ├── template.pdf
+│   ├── template-1.png
+│   └── template_manifest.json
 ├── generated_images/
 │   ├── slide_01-candidate.png
 │   ├── slide_02-candidate.png
@@ -159,11 +164,13 @@ The default page-worker capacity is 30. Treat this as the requested maximum for 
 
 Parent agent responsibilities:
 
-- Own `outline.md`, `deck_spec.json`, Chart Source Packages, `chart_manifest.json`, `prompts/`, `generated_images/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
+- Own `outline.md`, `deck_spec.json`, the Gate 1 `template/` package, Chart Source Packages, `chart_manifest.json`, `prompts/`, `generated_images/`, `origin_image/`, QA, `speech.md`, and final Project Workspace handoff.
 - Run `prepare_slide_prompts.py` or otherwise write full per-slide JSON jobs and `slide_jobs.json` before delegation.
 - Run `slide_job_status.py` to see dispatch slots and pending slide ids before each batch.
 - Ensure the approved sample slide is included in every non-sample job as a style-only input image when available.
 - Ensure every dispatched slide job is self-contained. If a slide summarizes, compares, continues, or refers to deck-wide concepts, put the required concepts into `deck_context` or the slide's `local_context` before running `prepare_slide_prompts.py`.
+- Ensure every `prompts/slide_XX.json` plans its available reference inputs before dispatch: the approved sample style reference when available, the slide's planned Data Chart renders when available, and the selected `template/template-<N>.png` when a master template exists. These entries must appear in both `reference_inputs` and `input_images`.
+- Ensure every slide job uses the intended template page mapping from `deck_spec.json` or the deterministic default page 1. Treat the rendered template page as a strict input and preserve its master structure.
 - Ensure `sample_generation_method` is present in `deck_spec.json`, every `prompts/slide_XX.json`, and `slide_jobs.json`; it must describe the exact backend/tool/mode used to generate the approved sample.
 - If the approved sample slide already exists and should not be regenerated, mark that slide in `deck_spec.json` with `sample_approved: true` or `approved_sample: true` before running `prepare_slide_prompts.py`; the helper records it as `accepted` when the final image file exists.
 - In built-in `image_gen` mode, ensure every slide-level required local source image has already been inspected with `view_image` before any delegated job that depends on it.
@@ -182,6 +189,7 @@ Subagent responsibilities:
 - Treat the approved sample slide as style reference only.
 - Treat any required source images as strict input assets and preserve their content according to the prompt.
 - Inspect the generated candidate for text quality, style consistency, required-image inclusion, and layout issues before returning it.
+- Verify that the candidate follows the supplied master template page when one exists and contains no visible slide/page number. The filename still uses `slide_XX.png`.
 - Save or copy every original candidate into the deck's `generated_images/` directory, then return the selected deck-local absolute path. Do not leave candidates only in a tool cache or `$CODEX_HOME` directory.
 - Return only the selected original generated image path, the backend used, and a one-sentence QA note.
 

@@ -16,6 +16,7 @@ agent 会先理解：
 - 是否有必需图片素材
 
 agent 会先向你展示来源简报，并提供资产清单；每项素材会记录来源或路径、预定用途与当前可用状态。核心字段必须有明确值或经你确认的假设，未解决问题会保持此阶段未完成。
+如果你指定了 `.ppt` 或 `.pptx` 母片模板，agent 会在这个阶段先将它复制到 `template/template.ppt` 或 `template/template.pptx`，导出 `template/template.pdf`，并 render 成 `template/template-1.png` 等逐页底稿；同时记录每页预定使用的母片页面。
 
 ## 阶段 2：确认大纲
 
@@ -52,7 +53,7 @@ agent 会给出 2-3 个风格方向并推荐一个。候选风格来自 12 种�
 - 色彩和排版是否稳定
 - 是否适合批量扩展到整套 PPT
 
-样张通过后，再批量生成整套。子智能体的中间候选图统一写入项目工作区的 `generated_images/`，由 parent agent 将选中的候选图复制到 `origin_image/slide_XX.png`。
+样张通过后，再批量生成整套。每页 prompt 会尽可能先规划 approved sample、该页图表素材与母片底稿 `template/template-<N>.png`。子智能体的中间候选图统一写入项目工作区的 `generated_images/`，由 parent agent 将选中的候选图复制到 `origin_image/slide_XX.png`。生成图片不包含可见页码，但文件名仍使用 `slide_XX.png`。
 
 ## 阶段 6：批量生成
 

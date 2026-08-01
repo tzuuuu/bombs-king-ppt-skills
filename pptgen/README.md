@@ -47,6 +47,7 @@
 - 可沉淀个人风格库：生成满意后，可以把当前风格保存到个人风格库（`~/.codex-ppt-skill/references/`），下次直接复用；风格库存放在 skill 安装目录之外，更新 skill 不会丢失，同名时个人风格优先于内置风格。
 - 多 agent 并发生成：样张确认后，默认以最多 30 个页面 worker 为目标，一个子 agent 负责一页；agent 会填满所有可用槽位，并在 worker 返回后立即补派下一个待生成页面，避免页面任务闲置。
 - 支持指定图片插入：可以要求某一页必须放入论文原图、实验结果图、截图、架构图等素材，并让页面围绕这些图片适配主题和版式。
+- 支持母片模板处理：用户指定 `.ppt` 或 `.pptx` 后，Gate 1 会复制、导出 PDF、render 逐页 PNG，并在每页 prompt 中规划可用的母片底稿。
 - 自动生成演讲稿：会生成 `speech.md`，并保留在项目工作区中供后续重建使用。
 - 交付可重现数据图表：每张数值图表都包含 Python 生成器、实际 CSV/JSON 快照、透明 PNG 与 manifest 记录。
 
@@ -84,6 +85,11 @@
 
 ```text
 {基础目录}/{PPT名称}/        # 当前 PPT 的独立项目目录
+├── template/               # 用户指定母片：源文件、PDF 与逐页 PNG render
+│   ├── template.pptx 或 template.ppt
+│   ├── template.pdf
+│   ├── template-1.png      # 母片第 1 页底稿
+│   └── template_manifest.json
 ├── origin_image/           # 正式幻灯片图片目录，只放最终采用的页面
 │   ├── slide_01.png        # 第 1 页幻灯片图片
 │   ├── slide_02.png        # 第 2 页幻灯片图片
@@ -99,7 +105,7 @@
 └── speech.md               # 供后续重建使用的演讲稿
 ```
 
-你可以在 `origin_image/` 里查看每一页最终采用的幻灯片图片，文件会按 `slide_01.png`、`slide_02.png` 这样的顺序排列。子智能体生成的候选图统一放在 `generated_images/`，由 parent agent 将选中的候选图复制到 `origin_image/`。想预览整套 PPT 的视觉效果，或只挑某一页继续修改时，直接看这里最方便。
+如果用户指定母片，Gate 1 会先把它处理到 `template/`，后续每页 prompt 会规划 approved sample、相关图表素材与 `template/template-<N>.png`。生成的图片不含可见页码，但文件名仍按 `slide_XX.png` 排列。你可以在 `origin_image/` 里查看每一页最终采用的幻灯片图片；子智能体生成的候选图统一放在 `generated_images/`，由 parent agent 将选中的候选图复制到 `origin_image/`。
 
 `speech.md` 是为后续可编辑 PowerPoint 重建保留的配套演讲稿。PPTGen 本身不组装中间 PPTX。
 

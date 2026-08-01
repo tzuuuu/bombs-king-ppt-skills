@@ -8,6 +8,12 @@ Use this output structure:
 
 ```text
 {base_dir}/{deck_name}/
+├── template/
+│   ├── template.pptx or template.ppt
+│   ├── template.pdf
+│   ├── template-1.png
+│   ├── template-2.png
+│   └── template_manifest.json
 ├── origin_image/
 │   ├── slide_01.png
 │   └── ...
@@ -35,7 +41,7 @@ If the user did not specify a destination, use the current working directory or 
 python3 {skill_root}/scripts/project_handoff.py init {base_dir}/{deck_name}
 ```
 
-The initializer never creates a PPTX. `origin_image/` is the Slide Image Set and contains only final `slide_XX.png` images. `generated_images/` is the canonical location for every subagent-generated candidate, including drafts and rejected variants. The parent agent copies the selected candidate from there into `origin_image/`.
+The initializer creates an empty `template/` directory for every workspace. When the user supplies a `.ppt` or `.pptx` master template, Gate 1 fills it with the copied source, `template.pdf`, one `template-<N>.png` per rendered page, and `template_manifest.json`. `origin_image/` is the Slide Image Set and contains only final `slide_XX.png` images. `generated_images/` is the canonical location for every subagent-generated candidate, including drafts and rejected variants. The parent agent copies the selected candidate from there into `origin_image/`.
 
 ## Quality Check And Repair
 
@@ -83,6 +89,8 @@ Validation checks:
 
 - required workspace directories and deck artifacts exist;
 - every expected `slide_XX.png` exists and there are no extra final slide images;
+- every slide job declares `render_slide_number: false`; visible page numbers are added only downstream;
+- when a master template exists, its source, PDF, rendered PNG pages, and manifest are complete, and every slide job references a rendered template page;
 - slide jobs and run state are complete;
 - no intermediate PPTX exists;
 - every planned Data Chart has exactly one valid manifest entry;

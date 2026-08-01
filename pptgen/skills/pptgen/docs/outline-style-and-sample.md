@@ -57,6 +57,8 @@ If the user has already specified a style, provided a style image, or provided a
 
 For PDF/PPT/PPTX style references, do not infer the visual system from document structure, outline text, XML, file metadata, or slide object hierarchy alone. First render or export representative pages/slides into real page images, inspect those rendered images, and derive the style from what is actually visible on the pages. If the file has multiple visual sections, inspect enough representative pages to capture the shared style and any section-specific variations.
 
+If the user supplied a `.ppt` or `.pptx` master template rather than a loose style reference, use the Gate 1 master-template branch in `docs/user-supplied-assets.md`. The template source, PDF export, and rendered `template/template-<N>.png` pages are required Project Workspace inputs. Use the selected rendered page as the strict master-template reference for the sample and every later slide.
+
 When extracting style from reference material, separate content reuse from style reuse. Unless the user explicitly asks to reuse the source content, treat the provided image/PDF/PPT/PPTX as a style reference only.
 
 If the user has not provided a clear style, prefer a multiple-choice question: offer 2-3 concrete style directions and mark one as your recommendation. Each style option should briefly specify:
@@ -119,7 +121,8 @@ Sample slide requirements:
 - Use the confirmed style description.
 - Prefer a representative content slide over the cover when possible.
 - Demonstrate the intended deck rhythm: the sample should show how the chosen style adapts to a real content page, not just a generic fixed template.
-- Save it directly as the intended final slide filename, such as `{base_dir}/{deck_name}/origin_image/slide_08.png`. In CLI/API fallback mode, use `scripts/image_gen.py generate --out` for that exact path.
+- Save it directly as the intended final slide filename, such as `{base_dir}/{deck_name}/origin_image/slide_08.png`. In CLI/API fallback mode, use `scripts/image_gen.py generate --out` for that exact path. Do not render a visible slide/page number in the image; keep the lower-right numbering area available for downstream numbering.
+- When a master template is present, include the selected `template/template-<N>.png` as a strict input and preserve its visible master structure.
 - Show the sample image to the user.
 - Ask the user to confirm the visual style, typography, layout density, and Chinese text quality.
 

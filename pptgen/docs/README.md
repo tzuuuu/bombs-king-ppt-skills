@@ -30,6 +30,7 @@ Codex PPT 是一个面向 Codex 的整页幻灯片图片与项目工作区生成
 - 支持参考材料仿风格：可以阅读用户提供的 PPT、PDF 或截图，理解每页图片风格后再仿照生成。
 - 可沉淀个人风格库：满意的风格可以保存到 `~/.codex-ppt-skill/references/`，存放在 skill 安装目录之外，更新 skill 不丢失，后续制作直接按名字复用。
 - 支持指定素材入页：可以把论文原图、实验结果图、架构图或截图指定到具体页面中使用。
+- 支持母片模板处理：用户指定 `.ppt` 或 `.pptx` 后，Gate 1 会复制、导出 PDF、render 逐页 PNG，并在每页 prompt 中规划可用的母片底稿。
 - 支持多 agent 环境：除 Codex 外，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用。
 - 验证项目工作区交接：保留 `outline.md`、每页图片、`speech.md`、执行状态与可重现图表来源包，不组装中间 PPTX。
 - 支持通过第三方 API 使用文本模型和 `gpt-image-2` 生图模型。

@@ -120,6 +120,76 @@ def _slide_images(slide: Dict[str, Any], *, slide_number: int, base_dir: Path) -
     return images
 
 
+def _template_page_number(
+    deck: Dict[str, Any],
+    slide: Dict[str, Any],
+    *,
+    available_pages: List[int],
+) -> Optional[int]:
+    if not available_pages:
+        if deck.get("template") is not None:
+            _die("A template was configured, but template/template-*.png is missing.")
+        return None
+    raw_page = slide.get("template_page")
+    template_config = deck.get("template")
+    if raw_page is None and isinstance(template_config, dict):
+        raw_page = template_config.get("default_page") or template_config.get("page")
+    if raw_page is None:
+        raw_page = 1
+    try:
+        page = int(raw_page)
+    except (TypeError, ValueError):
+        _die(f"Slide {slide.get('number', '?')}: template_page must be an integer.")
+    if page not in available_pages:
+        _die(
+            f"Slide {slide.get('number', '?')}: template page {page} is not rendered; "
+            f"available pages: {', '.join(str(item) for item in available_pages)}."
+        )
+    return page
+
+
+def _template_image(
+    deck: Dict[str, Any],
+    slide: Dict[str, Any],
+    *,
+    out_dir: Path,
+    available_pages: List[int],
+) -> Optional[Dict[str, Any]]:
+    page = _template_page_number(deck, slide, available_pages=available_pages)
+    if page is None:
+        return None
+    path = (out_dir / "template" / f"template-{page}.png").resolve()
+    if not path.is_file():
+        _die(f"Rendered template page does not exist: {path}")
+    return {
+        "path": str(path),
+        "role": f"strict master template page {page}; preserve its visible layout and background",
+        "fidelity": (
+            "strict template input; preserve the visible master background, margins, "
+            "header/footer, brand elements, placeholder regions, and lower-right page-number area"
+        ),
+        "template_page": page,
+    }
+
+
+def _available_template_pages(out_dir: Path, *, template_configured: bool) -> List[int]:
+    template_dir = out_dir / "template"
+    pages: List[int] = []
+    for path in template_dir.glob("template-*.png"):
+        try:
+            pages.append(int(path.stem.rsplit("-", 1)[1]))
+        except (IndexError, ValueError):
+            _die(f"Unexpected rendered template filename: {path.name}")
+    if not pages:
+        has_template_artifact = any(
+            (template_dir / name).exists()
+            for name in ("template.ppt", "template.pptx", "template.pdf", "template_manifest.json")
+        )
+        if has_template_artifact or template_configured:
+            _die("Template artifacts exist but no rendered template pages were found.")
+    return sorted(set(pages))
+
+
 def _sample_generation_method(spec: Dict[str, Any], *, base_dir: Path) -> Optional[Dict[str, Any]]:
     method = spec.get("sample_generation_method") or spec.get("image_generation_method")
     if method is None:
@@ -140,6 +210,28 @@ def _method_backend_label(method: Optional[Dict[str, Any]]) -> Optional[str]:
         value = method.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
+    return None
+
+
+def _sample_style_reference(
+    configured_reference: Optional[Dict[str, Any]],
+    sample_generation_method: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    if configured_reference:
+        reference = dict(configured_reference)
+        reference.setdefault("role", "approved sample slide style reference")
+        reference.setdefault("fidelity", "style reference; preserve visual identity without copying exact layout")
+        return reference
+    if not sample_generation_method:
+        return None
+    for key in ("approved_sample_path", "sample_slide_path", "sample_output_path"):
+        path = sample_generation_method.get(key)
+        if isinstance(path, str) and path.strip():
+            return {
+                "path": path,
+                "role": "approved sample slide style reference",
+                "fidelity": "style reference; preserve visual identity without copying exact layout",
+            }
     return None
 
 
@@ -185,6 +277,7 @@ def _build_prompt(
     slide: Dict[str, Any],
     number: int,
     global_style_reference: Optional[Dict[str, Any]],
+    template_image: Optional[Dict[str, Any]],
     chart_images: List[Dict[str, Any]],
     base_dir: Path,
 ) -> str:
@@ -193,6 +286,8 @@ def _build_prompt(
     images: List[Dict[str, Any]] = []
     if global_style_reference:
         images.append(global_style_reference)
+    if template_image:
+        images.append(template_image)
     images.extend(_slide_images(slide, slide_number=number, base_dir=base_dir))
     images.extend(chart_images)
     required_background = {
@@ -250,6 +345,18 @@ def _build_prompt(
             "its exact layout unless this slide's layout explicitly asks for it.\n"
         )
 
+    if template_image:
+        prompt_parts.append(
+            "## Master Template Rule\n"
+            f"Use `{template_image['path']}` as the strict master-template input for this page. "
+            "Preserve its visible background, grid, margins, header/footer, brand elements, "
+            "placeholder regions, and lower-right page-number area. Generate the slide content "
+            "inside the template's existing composition. Treat any region absent from the rendered "
+            "template as intentionally empty; keep it empty and keep the template's visual system "
+            "as the source of truth. The image model supplies slide content only; it does not "
+            "redraw, replace, or invent a different master background or template element.\n"
+        )
+
     if chart_images:
         prompt_parts.append(
             "## Chart Source Package Rule\n"
@@ -273,7 +380,9 @@ def _build_prompt(
         "- The final image itself must contain the title and key points.\n"
         "- Render Chinese text exactly and legibly; avoid garbled characters.\n"
         "- Keep the confirmed deck style consistent while varying layout by slide role.\n"
-        "- No watermark, unrelated logo, or extra slide number.\n"
+        "- Do not render a slide/page number in the image; reserve the lower-right page-number area for downstream numbering.\n"
+        "- Keep the output filename in the slide_XX naming scheme even though the image has no visible page number.\n"
+        "- No watermark or unrelated logo.\n"
     )
     return "\n".join(part for part in prompt_parts if part)
 
@@ -283,12 +392,15 @@ def _job_images(
     *,
     number: int,
     global_style_reference: Optional[Dict[str, Any]],
+    template_image: Optional[Dict[str, Any]],
     chart_images: List[Dict[str, Any]],
     base_dir: Path,
 ) -> List[Dict[str, Any]]:
     images: List[Dict[str, Any]] = []
     if global_style_reference:
         images.append(global_style_reference)
+    if template_image:
+        images.append(template_image)
     images.extend(_slide_images(slide, slide_number=number, base_dir=base_dir))
     images.extend(chart_images)
     return images
@@ -432,7 +544,16 @@ def main() -> int:
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "origin_image").mkdir(parents=True, exist_ok=True)
     (out_dir / "generated_images").mkdir(parents=True, exist_ok=True)
+    (out_dir / "template").mkdir(parents=True, exist_ok=True)
     (out_dir / "chart_assets").mkdir(parents=True, exist_ok=True)
+
+    template_configured = spec.get("template") is not None
+    if template_configured and not isinstance(spec.get("template"), dict):
+        _die("template must be an object when present.")
+    available_template_pages = _available_template_pages(
+        out_dir,
+        template_configured=template_configured,
+    )
 
     planned_identities: set[tuple[str, str]] = set()
     slide_ids = {f"slide_{number:02d}" for _, _, number in numbered_slides}
@@ -476,6 +597,15 @@ def main() -> int:
         global_style_reference["path"] = _resolve_image_path(global_style_reference["path"], base_dir=spec_dir)
 
     sample_generation_method = _sample_generation_method(spec, base_dir=spec_dir)
+    global_style_reference = _sample_style_reference(
+        global_style_reference,
+        sample_generation_method,
+    )
+    if global_style_reference and isinstance(global_style_reference.get("path"), str):
+        sample_path = global_style_reference["path"]
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", sample_path):
+            if not Path(sample_path).expanduser().is_file():
+                _die(f"Approved sample reference does not exist: {sample_path}")
     max_concurrent_slides = args.max_concurrent_slides
     if max_concurrent_slides is None:
         max_concurrent_slides = int(spec.get("max_concurrent_slides", DEFAULT_MAX_CONCURRENT_SLIDES))
@@ -497,11 +627,19 @@ def main() -> int:
         chart_images, chart_metadata = _chart_job_context(slide_charts)
         use_style_reference = bool(slide.get("use_approved_style_reference", True))
         slide_style_reference = global_style_reference if use_style_reference else None
+        template_image = _template_image(
+            spec,
+            slide,
+            out_dir=out_dir,
+            available_pages=available_template_pages,
+        )
+        template_page = template_image.get("template_page") if template_image else None
         prompt = _build_prompt(
             deck=spec,
             slide=slide,
             number=number,
             global_style_reference=slide_style_reference,
+            template_image=template_image,
             chart_images=chart_images,
             base_dir=spec_dir,
         )
@@ -509,15 +647,24 @@ def main() -> int:
             slide,
             number=number,
             global_style_reference=slide_style_reference,
+            template_image=template_image,
             chart_images=chart_images,
             base_dir=spec_dir,
         )
+        reference_inputs = {
+            "approved_sample": slide_style_reference,
+            "master_template": template_image,
+            "data_charts": chart_images,
+        }
         job = {
             "slide": number,
             "title": slide.get("title", f"Slide {number}"),
             "prompt": prompt,
             "out": f"slide_{number:02d}.png",
             "candidate_output_dir": "generated_images",
+            "template_page": template_page,
+            "render_slide_number": False,
+            "reference_inputs": reference_inputs,
             "input_images": images,
             "data_charts": chart_metadata,
             "requires_context_images": bool(images),
@@ -526,6 +673,11 @@ def main() -> int:
             "generation_contract": {
                 "must_use_selected_image_backend": True,
                 "must_match_sample_generation_method": bool(sample_generation_method),
+                "must_plan_reference_inputs": [
+                    "approved_sample",
+                    "master_template",
+                    "data_charts",
+                ],
                 "forbidden_final_image_methods": [
                     "local drawing/rendering scripts",
                     "Pillow-generated slides",
@@ -550,6 +702,9 @@ def main() -> int:
                 "title": slide.get("title", f"Slide {number}"),
                 "job": rel_to_deck(out_dir, prompt_path),
                 "out": rel_to_deck(out_dir, final_image),
+                "template_page": template_page,
+                "render_slide_number": False,
+                "reference_inputs": reference_inputs,
                 "input_images": images,
                 "data_charts": chart_metadata,
                 "requires_context_images": bool(images),
@@ -571,6 +726,8 @@ def main() -> int:
         "selected_backend": selected_backend,
         "sample_generation_method": sample_generation_method,
         "candidate_output_dir": "generated_images",
+        "template_output_dir": "template",
+        "template_pages_available": available_template_pages,
         "max_concurrent_slides": max_concurrent_slides,
         "slides": slide_job_entries,
         "updated_at": now_iso(),

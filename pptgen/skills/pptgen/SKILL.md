@@ -31,8 +31,10 @@ Create complete 16:9 slide images and finish at a validated Project Workspace. O
 
 - **Producer boundary:** the confirmed image backend produces every slide candidate under the deck's `generated_images/`; the parent copies the selected candidate into the final `origin_image/slide_XX.png`. Local drawing, Pillow, SVG, HTML/CSS/canvas, PowerPoint layout libraries, and manual overlays are invalid final-slide producers.
 - **Image directory boundary:** `generated_images/` is the only location for intermediate/subagent candidates, while `origin_image/` contains only the final ordered Slide Image Set.
+- **Master-template boundary:** when the user supplies a `.ppt` or `.pptx` master template, Gate 1 packages it under `template/`, exports `template/template.pdf`, renders `template/template-<N>.png`, and every later slide job uses the selected rendered page as a strict template input.
+- **Page-number boundary:** generated slide images contain no visible page number. Preserve the template's lower-right page-number area for downstream numbering while naming files `slide_XX.png`.
 - **Backend lock:** the approved sample and every worker use the same backend, tool family, mode, and exposed model settings. Record these as `sample_generation_method`.
-- **Terminal artifact:** deliver the Project Workspace and ordered Slide Image Set without an intermediate `.pptx`.
+- **Terminal artifact:** deliver the Project Workspace and ordered Slide Image Set without a generated intermediate `.pptx`; a user-supplied master template may remain under `template/`.
 
 ## Gate boundary protocol
 
@@ -45,8 +47,8 @@ Create complete 16:9 slide images and finish at a validated Project Workspace. O
 Run these gates in numbered order. Before creating artifacts or reporting progress, read `docs/workflow-gates-and-progress.md` for artifact barriers and the user-visible progress projection. A gate closes only on its stated evidence.
 
 1. **Source gate — establish the brief.**
-   Show a user-visible source brief that records topic, audience, goal, inclusions, exclusions, brand constraints, and page count; choose 8–12 slides when the user leaves count open. Add an asset inventory where each discovered asset records its source or path, intended role, and availability.
-   **Complete when:** every brief field has an explicit value or a user-approved assumption, and every discovered asset has one inventory entry with all three fields. Any unresolved open question keeps this gate active.
+   Show a user-visible source brief that records topic, audience, goal, inclusions, exclusions, brand constraints, and page count; choose 8–12 slides when the user leaves count open. Add an asset inventory where each discovered asset records its source or path, intended role, and availability. If the user specifies a master template, complete the master-template branch before closing this gate: initialize the Project Workspace, run `scripts/prepare_template.py` for the supplied `.ppt` or `.pptx`, copy it to `template/template.ppt` or `template/template.pptx`, export `template/template.pdf`, render every page to `template/template-<N>.png`, inspect the rendered pages, and record the intended template page mapping in the brief.
+   **Complete when:** every brief field has an explicit value or a user-approved assumption, every discovered asset has one inventory entry with all three fields, and any specified master template has a complete `template/` package with source, PDF, rendered PNG pages, and a recorded page mapping. Any unresolved open question or missing template artifact keeps this gate active.
 
 2. **Outline gate — approve narrative and asset mapping.**
    Read `docs/outline-style-and-sample.md`, draft `outline.md` with page roles and required assets, show it to the user, and stop. When required assets exist, also read `docs/user-supplied-assets.md` and obtain approval for each slide-to-asset mapping.
@@ -61,7 +63,7 @@ Run these gates in numbered order. Before creating artifacts or reporting progre
    **Complete when:** the user confirms one callable backend.
 
 5. **Sample gate — approve one representative page.**
-   Follow the sample branch in `docs/outline-style-and-sample.md`. Read `docs/project-handoff-and-reporting.md`, initialize the Project Workspace with `scripts/project_handoff.py init`, then generate exactly one representative `origin_image/slide_XX.png`. Show it, iterate on that same page, and record its approved `sample_generation_method` in `deck_spec.json`. Default to the current or source directory when no destination is given.
+   Follow the sample branch in `docs/outline-style-and-sample.md`. Read `docs/project-handoff-and-reporting.md`, initialize the Project Workspace with `scripts/project_handoff.py init`, then generate exactly one representative `origin_image/slide_XX.png` without a visible page number. When a master template exists, include its selected `template/template-<N>.png` as a strict input. Show it, iterate on that same page, and record its approved `sample_generation_method` in `deck_spec.json`. Default to the current or source directory when no destination is given.
    **Complete when:** the user approves the page and the recorded method identifies the actual backend, tool, mode, prompt source, approved image, and available generation settings.
 
 6. **Package gate — build reproducible inputs.**
@@ -74,11 +76,11 @@ Run these gates in numbered order. Before creating artifacts or reporting progre
 
 8. **QA gate — inspect and repair the Slide Image Set.**
    Follow `docs/project-handoff-and-reporting.md`. Use one QA subagent per final page and fill every available slot; independent repair candidates may also run in parallel through the locked backend. The parent consolidates QA, selects replacements, and records the final state. For fallback editing commands, consult `docs/cli-api-fallback.md`.
-   **Complete when:** every expected `slide_XX.png` passes the full checklist, selected candidates came from `generated_images/`, and rejected variants remain in `generated_images/` rather than `origin_image/`.
+   **Complete when:** every expected `slide_XX.png` passes the full checklist without a visible page number, selected candidates came from `generated_images/`, and rejected variants remain in `generated_images/` rather than `origin_image/`.
 
 9. **Handoff gate — validate the terminal artifact.**
    Finalize `outline.md` and, when requested, `speech.md` with `Slide N` headings. Run `scripts/project_handoff.py validate {base_dir}/{deck_name}` and use the final-report checklist in `docs/project-handoff-and-reporting.md`.
-   **Complete when:** validation reports `ready_for_handoff`, requested notes exist, and the report names paths, counts, backend provenance, recorded status, regenerated or blocked pages, and known limitations.
+   **Complete when:** validation reports `ready_for_handoff`, requested notes exist, any template package is complete and referenced by every slide job, and the report names paths, counts, backend provenance, recorded status, regenerated or blocked pages, and known limitations.
 
 ## Conditional Branch
 

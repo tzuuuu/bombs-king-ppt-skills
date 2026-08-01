@@ -47,6 +47,7 @@ For a basic introduction to skill design and usage, see [good-skill-design.pptx]
 - Builds a reusable personal style library: once you like a deck style, ask the agent to save it into `~/.codex-ppt-skill/references/` so future decks can reuse it directly; the library lives outside the skill install, survives skill updates, and a personal style with the same name takes priority over the built-in one.
 - Supports parallel subagent generation: after the sample slide is approved, the skill targets up to 30 page workers by default, with one subagent per slide; it fills every available slot and immediately assigns the next pending slide when a worker returns so page jobs do not sit idle.
 - Supports required image insertion: assign paper figures, experiment charts, screenshots, architecture diagrams, or other images to specific slides, and the generated page will adapt the layout and theme around them.
+- Master-template preparation: when a user supplies a `.ppt` or `.pptx`, Gate 1 copies it, exports a PDF, renders page PNGs, and plans the available master page in each slide prompt.
 - Generates a speaker script: creates `speech.md` and preserves it in the Project Workspace for downstream reconstruction.
 - Delivers reproducible Data Charts: every numerical chart includes its Python generator, exact CSV/JSON snapshot, transparent render, and manifest entry.
 
@@ -84,6 +85,11 @@ Each run is generated into an independent Project Workspace:
 
 ```text
 {base_dir}/{deck_name}/     # Independent project directory for this deck
+├── template/               # User master template source, PDF, and rendered page PNGs
+│   ├── template.pptx or template.ppt
+│   ├── template.pdf
+│   ├── template-1.png      # Rendered master-template page 1
+│   └── template_manifest.json
 ├── origin_image/           # Final slide images only
 │   ├── slide_01.png        # Slide 1 image
 │   ├── slide_02.png        # Slide 2 image
@@ -99,7 +105,7 @@ Each run is generated into an independent Project Workspace:
 └── speech.md               # Speaker script retained for downstream reconstruction
 ```
 
-Use `origin_image/` to review the final image used for each slide. Subagent-generated candidates are kept in `generated_images/`, and the parent agent copies the selected candidate into `origin_image/`. Files are named in order as `slide_01.png`, `slide_02.png`, and so on, which makes it easy to preview the deck visually or ask for one specific slide to be revised.
+When a user supplies a master template, Gate 1 prepares it under `template/`, and each slide prompt plans the approved sample, applicable Data Chart renders, and the selected `template/template-<N>.png`. Generated slide images contain no visible page number, while filenames remain `slide_XX.png`. Use `origin_image/` to review the final image used for each slide. Subagent-generated candidates are kept in `generated_images/`, and the parent agent copies the selected candidate into `origin_image/`.
 
 `speech.md` is the companion talk track retained for the downstream editable-PowerPoint stage. PPTGen itself does not assemble an intermediate PPTX.
 

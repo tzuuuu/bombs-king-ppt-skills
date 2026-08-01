@@ -6,6 +6,44 @@ When the user provides paper figures, screenshots, logos, or other assets that m
 
 Data Charts use the structured-data branch in `data-charts.md`; they are not image-only user-supplied assets.
 
+## Master Template Branch
+
+When the user supplies a PowerPoint master template, treat it as a required source asset and process it during Gate 1 before outline confirmation:
+
+```bash
+python3 {skill_root}/scripts/project_handoff.py init {base_dir}/{deck_name}
+python3 {skill_root}/scripts/prepare_template.py \
+  {source_template.pptx_or_ppt} \
+  {base_dir}/{deck_name} \
+  --overwrite
+```
+
+The command copies the source to `template/template.pptx` or `template/template.ppt`, exports it to `template/template.pdf`, renders each PDF page to `template/template-1.png`, `template/template-2.png`, and so on, and records the package in `template/template_manifest.json`. Inspect the rendered template pages and record the intended page mapping in the source brief and later `deck_spec.json`.
+
+When preparing slide prompts, use the selected `template/template-<N>.png` as a strict input image. Preserve the visible master background, margins, brand elements, placeholder regions, and reserved lower-right page-number area. Treat regions absent from that PNG as intentionally empty so the image model supplies slide content within the supplied master structure.
+
+Record the selected default and per-slide pages in `deck_spec.json`:
+
+```json
+{
+  "template": {
+    "source": "template/template.pptx",
+    "pdf": "template/template.pdf",
+    "rendered_pages": [
+      "template/template-1.png",
+      "template/template-2.png"
+    ],
+    "default_page": 1
+  },
+  "slides": [
+    {"number": 1, "template_page": 1},
+    {"number": 2, "template_page": 2}
+  ]
+}
+```
+
+If a slide does not specify `template_page`, `prepare_slide_prompts.py` uses `template.default_page`, then page 1. A prepared template page is automatically added to that slide's `reference_inputs` and `input_images` in `prompts/slide_XX.json`.
+
 Recommended project-local asset location:
 
 ```text
