@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Bootstrap the installable skill and diagnostic CLI
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] A real macOS PowerPoint smoke test produces a valid native PDF, inspection PDF, page PNGs, and render manifest for a one-slide fixture.
 - [ ] The automation targets the snapshot by exact full path and closes only the presentation it opened.

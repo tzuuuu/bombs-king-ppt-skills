@@ -9,7 +9,7 @@ Put a native render gate before every judgment about visible PowerPoint content 
 
 ## Check the Runtime
 
-Run the skill-local CLI diagnostic before opening a presentation:
+Read [references/cli.md](references/cli.md), then run the skill-local CLI diagnostic before opening a presentation:
 
 ```bash
 powerpoint-native-render doctor
