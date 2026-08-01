@@ -29,24 +29,17 @@ Create complete 16:9 slide images and finish at a validated Project Workspace. O
 
 ## Invariants
 
-- **Gate order:** source and assets → outline approval → style approval → backend approval → one sample approval → full production → QA and handoff. Read `docs/workflow-gates-and-progress.md` before creating artifacts or advancing a gate.
 - **Producer boundary:** the confirmed image backend produces every final `origin_image/slide_XX.png`. Local drawing, Pillow, SVG, HTML/CSS/canvas, PowerPoint layout libraries, and manual overlays are invalid final-slide producers.
 - **Backend lock:** the approved sample and every worker use the same backend, tool family, mode, and exposed model settings. Record these as `sample_generation_method`.
-- **Delegation boundary:** after sample approval, assign every remaining page to one slide subagent whenever subagents are available. The parent owns project artifacts, state, QA, and handoff; each worker owns one prompt job.
-- **State evidence:** bundled scripts record preparation, dispatch, results, blockers, and completion. Files and recorded state, rather than chat claims, are completion evidence.
-- **Blocker behavior:** when a required worker, backend, or input is unavailable, record the blocker and report its phase, slide id, evidence path, and unfinished reason.
-- **Chart package:** create every Data Chart from structured data with the managed Matplotlib, pandas, NumPy, and Seaborn runtime. Deliver its Python generator, exact CSV/JSON snapshot, and transparent PNG; another dependency requires user approval.
-- **Chart-only render:** include data marks and necessary axes, scales, legends, units, and labels. Slide titles, narrative copy, page numbers, cards, borders, shadows, and decorative containers belong to the complete slide image.
-- **Authority split:** the Slide Image Set is authoritative for layout and style; Chart Source Packages are authoritative for Data Chart values. The image backend composes the complete page without reserved chart regions or local overlays.
 - **Terminal artifact:** deliver the Project Workspace and ordered Slide Image Set without an intermediate `.pptx`.
 
 ## Gated Workflow
 
-For a non-trivial deck, mirror these gates in a user-visible checklist with one active item. A gate closes only on the stated evidence.
+Run these gates in numbered order. Before creating artifacts or reporting progress, read `docs/workflow-gates-and-progress.md` for artifact barriers and the user-visible progress projection. A gate closes only on its stated evidence.
 
 1. **Source gate — establish the brief.**
-   Identify topic, audience, goal, inclusions, exclusions, brand constraints, required assets, and page count. Choose 8–12 slides when the user leaves count open.
-   **Complete when:** the brief and every discovered required asset are accounted for.
+   Show a user-visible source brief that records topic, audience, goal, inclusions, exclusions, brand constraints, and page count; choose 8–12 slides when the user leaves count open. Add an asset inventory where each discovered asset records its source or path, intended role, and availability.
+   **Complete when:** every brief field has an explicit value or a user-approved assumption, and every discovered asset has one inventory entry with all three fields. Any unresolved open question keeps this gate active.
 
 2. **Outline gate — approve narrative and asset mapping.**
    Read `docs/outline-style-and-sample.md`, draft `outline.md` with page roles and required assets, show it to the user, and stop. When required assets exist, also read `docs/user-supplied-assets.md` and obtain approval for each slide-to-asset mapping.
@@ -65,11 +58,11 @@ For a non-trivial deck, mirror these gates in a user-visible checklist with one 
    **Complete when:** the user approves the page and the recorded method identifies the actual backend, tool, mode, prompt source, approved image, and available generation settings.
 
 6. **Package gate — build reproducible inputs.**
-   Prepare strict user assets per `docs/user-supplied-assets.md`. For every planned Data Chart, follow `docs/project-handoff-and-reporting.md` and finish its Chart Source Package and deck-level `chart_manifest.json` before prompt preparation.
+   Prepare strict user assets per `docs/user-supplied-assets.md`. When the approved outline plans any Data Chart, read `docs/data-charts.md` and finish every Chart Source Package and the deck-level `chart_manifest.json` before prompt preparation.
    **Complete when:** `deck_spec.json` declares every planned page, every strict asset exists at its recorded path, and every delivered chart reproduces from its local snapshot.
 
 7. **Production gate — prepare, dispatch, and record every page.**
-   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Create self-contained `prompts/slide_XX.json` jobs with `scripts/prepare_slide_prompts.py`. Dispatch one worker per remaining page up to available slots, record each real agent id with `record_slide_dispatch.py`, visually inspect each returned candidate, and record the selected original with `record_slide_result.py`.
+   Read `docs/slide-generation-and-subagents.md` and `prompts/slide-worker.md`. Prepare self-contained slide jobs, dispatch the remaining pages, inspect returned candidates, and record every outcome through the disclosed state contract.
    **Complete when:** `slide_job_status.py` shows every generated page as `recorded`, approved samples as `accepted`, and no page as `pending`, `dispatched`, or `blocked`.
 
 8. **QA gate — inspect and repair the Slide Image Set.**

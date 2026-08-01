@@ -15,6 +15,8 @@ The agent first determines:
 - Content that must be included or excluded
 - Whether any image assets are required
 
+The agent first shows you a source brief and an asset inventory. Every asset records its source or path, intended role, and current availability. Core brief fields need explicit values or assumptions you approve; unresolved questions keep this stage open.
+
 ## Stage 2: Confirm the Outline
 
 The agent generates `outline.md`, which usually includes:

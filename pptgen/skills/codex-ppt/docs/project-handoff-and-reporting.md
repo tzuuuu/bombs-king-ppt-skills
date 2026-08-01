@@ -1,6 +1,6 @@
 # Project Handoff And Reporting
 
-Read this before initializing the Project Workspace, generating Data Charts, writing speaker notes, validating the handoff, or sending the final report.
+Read this before initializing the Project Workspace, writing speaker notes, validating the handoff, or sending the final report. For planned Data Charts, read `data-charts.md` before creating packages or slide jobs.
 
 ## Project Workspace
 
@@ -35,36 +35,6 @@ python3 {skill_root}/scripts/project_handoff.py init {base_dir}/{deck_name}
 ```
 
 The initializer never creates a PPTX. `origin_image/` is the Slide Image Set and contains only final `slide_XX.png` images. Keep drafts and rejected candidates elsewhere.
-
-## Data Charts And Chart Source Packages
-
-Every Data Chart must be generated during the task from structured data. Do not accept an image-only chart as a substitute for its source data.
-
-For each chart:
-
-1. Save the exact data used in the run as a local CSV or JSON snapshot.
-2. Write a self-contained `chart.py` that reads that local snapshot and writes `chart.png` beside the script.
-3. Use only Matplotlib, pandas, NumPy, and Seaborn unless the user explicitly approves another dependency.
-4. Do not install packages, fetch live data, or depend on mutable external sources inside the delivered generator.
-5. Render a transparent PNG using the confirmed deck palette.
-6. Include only chart marks and the axes, scales, legends, units, and labels necessary to understand the data.
-7. Do not add the slide title, narrative explanation, page number, card, border, shadow, or decorative container.
-
-Record every package in deck-level `chart_manifest.json` with schema version `1`. Each entry must include:
-
-- `slide_id`
-- `chart_id`
-- `chart_type`
-- `semantic_purpose`
-- `source_description`
-- `required_downstream: true`
-- workspace-relative `package.script`, `package.data`, and `package.image` paths
-
-Do not record coordinates, bounding boxes, dimensions, or downstream reconstruction strategy. PPTGen owns chart identity and provenance; the downstream editable-PowerPoint workflow owns chart detection and placement.
-
-Declare the matching `chart_id` under the target slide's `data_charts` list in `deck_spec.json`. Run `prepare_slide_prompts.py` only after all planned Chart Source Packages and the manifest are complete. The helper rejects missing, duplicate, unknown, unplanned, opaque, or out-of-workspace chart packages and adds each chart render to its slide job as required visual context.
-
-The image backend generates the complete slide. Do not reserve a chart placeholder or locally composite the accurate chart render into the final page. The Slide Image Set is authoritative for layout and style; Chart Source Packages remain authoritative for numerical values.
 
 ## Quality Check And Repair
 

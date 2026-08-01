@@ -207,7 +207,7 @@ Use the codex-ppt skill to turn /path/to/article.md into a roughly 10-slide PPT.
 
 The skill follows this workflow:
 
-1. Read the source content and plan the deck outline.
+1. Show a source brief and asset inventory covering the content goal, audience, slide count, and required assets.
 2. Generate `outline.md` and ask you to confirm slide count, slide titles, and key points.
 3. Offer 2-3 visual style options and recommend one for user confirmation.
 4. State the image generation backend before the first image and ask you to confirm it.

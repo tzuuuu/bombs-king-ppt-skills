@@ -57,11 +57,7 @@ The goal is not to make subagents validate missing context. The goal is for the 
 
 ## Data Chart Context
 
-Declare each planned chart id in its slide's `data_charts` list. Before running `prepare_slide_prompts.py`, create the matching Chart Source Package and `chart_manifest.json` entry according to `project-handoff-and-reporting.md`.
-
-The helper validates complete package coverage and adds the transparent chart render to `input_images` with a Data Chart role. It rejects missing or unplanned packages, duplicate or unknown identities, opaque renders, placement metadata, and paths outside the Project Workspace. The chart render is required visual context for the image backend, while the Python generator and data snapshot remain required downstream handoff artifacts.
-
-The worker generates the complete slide. It must not edit the Chart Source Package, invent replacement values, reserve an empty chart region, or locally composite the accurate chart render into the page.
+When a slide job declares any `data_charts`, read `data-charts.md` before preparing or dispatching that job. Its Chart Source Packages and manifest entries must already be complete.
 
 Use a structured visual brief for each slide. Image generation works best when the prompt separates canvas, style, layout, text, visual elements, and constraints instead of relying only on a long style paragraph.
 

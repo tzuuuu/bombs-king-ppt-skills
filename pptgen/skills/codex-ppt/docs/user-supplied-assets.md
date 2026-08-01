@@ -4,7 +4,7 @@ Read this before using paper figures, screenshots, logos, or other non-chart ass
 
 When the user provides paper figures, screenshots, logos, or other assets that must appear in the deck, treat them as source assets, not as loose visual inspiration.
 
-Data Charts are not image-only user-supplied assets in this workflow. Generate every Data Chart during the task from structured data and deliver its Python generator, exact CSV/JSON snapshot, transparent render, and chart manifest entry as described in `project-handoff-and-reporting.md`.
+Data Charts use the structured-data branch in `data-charts.md`; they are not image-only user-supplied assets.
 
 Recommended project-local asset location:
 
